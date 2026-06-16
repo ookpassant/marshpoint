@@ -49,10 +49,14 @@ nginx/    Nginx site config
 cd server
 cp ../.env.example .env      # edit values
 npm install
-psql -U marshalapp -d marshals -f db/schema.sql
+npm run migrate              # apply database migrations
 npm run seed                 # optional: load example data
 npm run dev
 ```
+
+The schema is managed as versioned migrations in `server/db/migrations/`.
+`npm run migrate` applies any not yet recorded in the `schema_migrations`
+table; add a new numbered `.sql` file there to evolve the schema.
 
 The API listens on `http://localhost:3001`.
 
@@ -99,16 +103,37 @@ After running `npm run seed`:
 
 Change these immediately in any real deployment.
 
-## Production deployment
+## Run with Docker
 
-See the build & deployment steps in the project specification and the
-`nginx/marshal.conf` and `server/ecosystem.config.js` files. In short:
+The whole stack (PostgreSQL + API + Nginx-served frontend) runs with one
+command. The server applies migrations on start.
+
+```bash
+docker compose up --build
+```
+
+Then open `http://localhost:8080`. Override the placeholder secrets
+(`DB_PASSWORD`, `JWT_SECRET`, SMTP settings, …) with a `.env` file beside
+`docker-compose.yml`.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
+
+- **Server** — `npm ci` then `npm test` (unit + integration) against a
+  PostgreSQL 16 service container.
+- **Client** — `npm ci` then a production `npm run build`.
+
+## Production deployment (VPS / PM2)
+
+For a non-Docker deployment, see the `nginx/marshal.conf` and
+`server/ecosystem.config.js` files. In short:
 
 ```bash
 cd /var/www/marshal-app
 git pull
 cd client && npm run build
-cd ../server && npm install
+cd ../server && npm install && npm run migrate
 pm2 restart marshal-app
 ```
 

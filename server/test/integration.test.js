@@ -8,8 +8,6 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
-const path = require('path');
 const bcrypt = require('bcryptjs');
 
 // Point the app at the test database BEFORE requiring it (dotenv won't override
@@ -23,6 +21,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'integration-test-secret';
 
 const app = require('../app');
 const db = require('../db/pool');
+const { runMigrations } = require('../db/migrate');
 
 async function dbReachable() {
   try { await db.query('SELECT 1'); return true; } catch { return false; }
@@ -34,9 +33,8 @@ test('API integration — full lifecycle', async (t) => {
     return;
   }
 
-  // Schema + reset.
-  const schema = fs.readFileSync(path.join(__dirname, '../db/schema.sql'), 'utf8');
-  await db.query(schema);
+  // Schema (via migrations) + reset.
+  await runMigrations(db);
   await db.query(`TRUNCATE users, events, event_days, marshals, invitations,
     applications, shirt_orders, schedule_assignments, comms_log RESTART IDENTITY CASCADE`);
 

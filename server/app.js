@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 
+const { securityHeaders, loginLimiter, publicLimiter, globalLimiter } = require('./middleware/security');
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
 const marshalRoutes = require('./routes/marshals');
@@ -17,14 +18,24 @@ const reportRoutes = require('./routes/reports');
 
 const app = express();
 
+// Behind Nginx in production — trust the proxy so rate-limit sees real IPs.
+app.set('trust proxy', 1);
+
+app.use(securityHeaders);
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/api', globalLimiter);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'marshpoint', time: new Date().toISOString() }));
 
-// Public (token-auth) routes.
+// Public (token-auth) routes — rate-limited.
+app.use('/api/apply', publicLimiter);
+app.use('/api/status', publicLimiter);
 app.use('/api', applyRoutes);
+
+// Tighter limit on login specifically.
+app.use('/api/auth/login', loginLimiter);
 
 // Auth + admin routes.
 app.use('/api', authRoutes);
