@@ -29,7 +29,7 @@ const EMPTY = {
   accommodation_type: '', accommodation_size_l: '', accommodation_size_w: '',
   sharing_with_names: '', travelling_with_names: '',
   shirts: [{ size: 'M', quantity: 1 }],
-  agree_constitution: false, agree_contact: false, signature_name: '',
+  agree_constitution: false, agree_contact: false, agree_privacy: false, signature_name: '',
 };
 
 function Section({ n, title, children }) {
@@ -153,6 +153,7 @@ export default function MarshalForm() {
     if (!form.shirts.length || shirtQty < 1) e.shirts = 'At least one shirt is required';
     if (!form.agree_constitution) e.agree_constitution = 'Please tick to continue';
     if (!form.agree_contact) e.agree_contact = 'Please tick to continue';
+    if (!form.agree_privacy) e.agree_privacy = 'Please tick to continue';
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -374,6 +375,8 @@ export default function MarshalForm() {
           {errors.agree_constitution && <div className="field-error">{errors.agree_constitution}</div>}
           <label className="check-row"><input type="checkbox" checked={form.agree_contact} onChange={(e) => set('agree_contact', e.target.checked)} /> I agree to be contacted by club officials about this event.</label>
           {errors.agree_contact && <div className="field-error">{errors.agree_contact}</div>}
+          <label className="check-row"><input type="checkbox" checked={form.agree_privacy} onChange={(e) => set('agree_privacy', e.target.checked)} /> I have read and agree to the <a href="/privacy" target="_blank" rel="noreferrer" style={{ marginLeft: 4 }}>privacy notice</a>.</label>
+          {errors.agree_privacy && <div className="field-error">{errors.agree_privacy}</div>}
           <Field label="Typed signature" required hint="Type your full name as your signature" error={errors.signature_name}><input value={form.signature_name} onChange={(e) => set('signature_name', e.target.value)} /></Field>
           <Field label="Date"><input value={new Date().toLocaleDateString('en-GB')} readOnly style={{ background: 'var(--color-border-light)', maxWidth: 160 }} /></Field>
         </Section>

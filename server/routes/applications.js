@@ -4,6 +4,7 @@ const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { upload, supersedeOldLicence } = require('../middleware/upload');
 const { sendMail } = require('../email/mailer');
+const { logProcessing } = require('../util/gdpr');
 
 const router = express.Router();
 
@@ -301,11 +302,16 @@ router.post('/admin/applications/:id/licence', requireAuth, requireCoordinator, 
 router.get('/admin/applications/:id/licence', requireAuth, async (req, res) => {
   try {
     const r = await db.query(
-      `SELECT m.licence_upload_path FROM applications a JOIN marshals m ON m.id = a.marshal_id WHERE a.id = $1`,
+      `SELECT a.marshal_id, a.event_id, m.licence_upload_path
+       FROM applications a JOIN marshals m ON m.id = a.marshal_id WHERE a.id = $1`,
       [req.params.id]
     );
     const p = r.rows[0] && r.rows[0].licence_upload_path;
     if (!p || !fs.existsSync(p)) return res.status(404).json({ error: 'No licence on file' });
+    logProcessing('licence_download', {
+      marshalId: r.rows[0].marshal_id, applicationId: Number(req.params.id),
+      eventId: r.rows[0].event_id, performedBy: req.user.userId,
+    }).catch(() => {});
     res.download(p);
   } catch (err) {
     console.error(err);

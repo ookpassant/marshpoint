@@ -28,7 +28,34 @@ export default function MarshalStatus() {
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState('');
+  const [dataBusy, setDataBusy] = useState(false);
+  const [dataMsg, setDataMsg] = useState('');
+  const [erased, setErased] = useState(false);
   const fileRef = useRef(null);
+
+  async function downloadData() {
+    setDataBusy(true); setDataMsg('');
+    try {
+      const res = await api.get(`/status/${token}/export`, { responseType: 'blob' });
+      const href = window.URL.createObjectURL(res.data);
+      const link = document.createElement('a');
+      link.href = href; link.download = 'my-marshpoint-data.json';
+      document.body.appendChild(link); link.click(); link.remove();
+      window.URL.revokeObjectURL(href);
+    } catch (err) { setDataMsg(errMessage(err, 'Could not export your data.')); }
+    finally { setDataBusy(false); }
+  }
+
+  async function requestErasure() {
+    if (!window.confirm('Ask the organisers to erase your personal data? They will action this and confirm.')) return;
+    setDataBusy(true); setDataMsg('');
+    try {
+      await api.post(`/status/${token}/erasure-request`);
+      setErased(true);
+      setDataMsg("Request sent. The organisers will erase your data and confirm.");
+    } catch (err) { setDataMsg(errMessage(err, 'Could not send your request.')); }
+    finally { setDataBusy(false); }
+  }
 
   function load() {
     return api.get(`/status/${token}`)
@@ -160,6 +187,23 @@ export default function MarshalStatus() {
             <tr><td className="muted">Total due</td><td><Money value={a.total_due} /> {a.payment_received ? <span className="badge badge-paid">Paid</span> : null}</td></tr>
           </tbody>
         </table>
+      </div>
+
+      {/* GDPR: your data & privacy */}
+      <div className="card mt">
+        <h3>Your data &amp; privacy</h3>
+        <p className="metadata" style={{ marginTop: 0 }}>
+          You can download everything we hold about you, or ask us to erase it. See our <a href="/privacy" target="_blank" rel="noreferrer">privacy notice</a>.
+        </p>
+        <div className="row gap-sm row-wrap">
+          <button className="btn btn-secondary btn-sm" onClick={downloadData} disabled={dataBusy}>Download my data</button>
+          {erased ? (
+            <span className="metadata">Erasure requested — we'll be in touch.</span>
+          ) : (
+            <button className="btn btn-ghost btn-sm" onClick={requestErasure} disabled={dataBusy}>Request data deletion</button>
+          )}
+        </div>
+        {dataMsg && <div className="mt"><Alert kind="info">{dataMsg}</Alert></div>}
       </div>
     </PublicLayout>
   );

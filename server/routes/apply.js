@@ -4,6 +4,7 @@ const { upload, supersedeOldLicence } = require('../middleware/upload');
 const { sendMail } = require('../email/mailer');
 const { templates } = require('../email/templates');
 const { buildMergeFields, calculateTotal, formatEventDates } = require('../util/helpers');
+const { PRIVACY_POLICY_VERSION, logProcessing, buildDataPack, anonymiseMarshal } = require('../util/gdpr');
 
 const router = express.Router();
 
@@ -73,6 +74,7 @@ router.get('/apply/:token', async (req, res) => {
       },
       already_submitted: existing.rows.length > 0,
       invitation_status: invitation.status,
+      privacy_policy_version: PRIVACY_POLICY_VERSION,
     });
   } catch (err) {
     console.error(err);
@@ -221,6 +223,12 @@ router.post('/apply/:token', async (req, res) => {
         ? parseInt(b.years_attended_event, 10) : null,
       total_due: total,
       signature_name: b.signature_name,
+      // GDPR consent record.
+      agreed_constitution: !!b.agree_constitution,
+      agreed_contact: !!b.agree_contact,
+      agreed_privacy: !!b.agree_privacy,
+      consent_given_at: new Date().toISOString(),
+      privacy_policy_version: PRIVACY_POLICY_VERSION,
     };
 
     const existing = await client.query(
@@ -267,6 +275,12 @@ router.post('/apply/:token', async (req, res) => {
     );
 
     await client.query('COMMIT');
+
+    // Record the consent for accountability.
+    logProcessing('consent', {
+      marshalId, applicationId: application.id, eventId: event.id,
+      detail: `Privacy policy v${PRIVACY_POLICY_VERSION}; constitution=${!!b.agree_constitution}, contact=${!!b.agree_contact}, privacy=${!!b.agree_privacy}`,
+    }).catch(() => {});
 
     // Fire-and-log notification emails (don't block the response on SMTP).
     const fields = buildMergeFields({ marshal, event, token: invitation.token });
@@ -430,6 +444,46 @@ router.get('/status/:token', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load status' });
+  }
+});
+
+// GET /api/status/:token/export — subject access: download everything we hold
+router.get('/status/:token/export', async (req, res) => {
+  try {
+    const ctx = await resolveToken(req.params.token);
+    if (!ctx || !ctx.marshal) return res.status(404).json({ error: 'This link is not valid.' });
+    const pack = await buildDataPack(ctx.marshal.id);
+    if (!pack) return res.status(404).json({ error: 'No data found.' });
+    logProcessing('export_self', { marshalId: ctx.marshal.id, eventId: ctx.event.id, detail: 'Self-service data export' }).catch(() => {});
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="my-marshpoint-data.json"`);
+    res.send(JSON.stringify(pack, null, 2));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to export your data' });
+  }
+});
+
+// POST /api/status/:token/erasure-request — ask the coordinator to erase your data
+router.post('/status/:token/erasure-request', async (req, res) => {
+  try {
+    const ctx = await resolveToken(req.params.token);
+    if (!ctx || !ctx.marshal) return res.status(404).json({ error: 'This link is not valid.' });
+    const { marshal, event } = ctx;
+    await logProcessing('erasure_request', { marshalId: marshal.id, eventId: event.id, detail: 'Requested via status page' });
+    const coordEmail = process.env.EMAIL_FROM_ADDRESS;
+    if (coordEmail) {
+      sendMail({
+        to: coordEmail,
+        subject: `Data erasure request — ${marshal.forenames} ${marshal.surname}`,
+        text: `${marshal.forenames} ${marshal.surname} (${marshal.email}) has requested erasure of their personal data via their status page.\n\nReview and action this in the Marshals area of the dashboard.`,
+        type: 'general', eventId: event.id, marshalId: marshal.id,
+      }).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to submit your request' });
   }
 });
 

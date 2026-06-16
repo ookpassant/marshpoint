@@ -161,6 +161,31 @@ reports, and a dedicated committee overview).
 Marshals who can't attend can decline in one click from their apply page, which
 notifies the coordinator and marks the invitation declined.
 
+## Data protection (UK GDPR)
+
+Marshpoint includes the technical building blocks for UK GDPR / Data Protection
+Act 2018 compliance. The legal/organisational parts (appointing a controller,
+ICO registration if required, the privacy-notice wording, choosing a lawful
+basis, and data-processing agreements with your email/host providers) remain the
+club's responsibility.
+
+- **Privacy notice & consent** — a `/privacy` page (template at
+  `client/src/pages/Privacy.jsx` — fill in your details). Applicants must agree
+  to it; each consent is stored against the application with a timestamp and the
+  `PRIVACY_POLICY_VERSION`.
+- **Right of access** — marshals can download everything held about them from
+  their status page; coordinators can export a full per-marshal data pack
+  (Marshals → a marshal → *Export data pack*).
+- **Right to erasure** — coordinators can erase a marshal (anonymises the record
+  and permanently deletes licence files, including superseded copies); marshals
+  can request erasure from their status page. Erasure keeps the row anonymised so
+  historical rosters stay intact.
+- **Retention** — `npm run retention` (run on a daily cron/timer) anonymises
+  marshals whose most recent event ended more than `RETENTION_DAYS` ago. Use
+  `--dry-run` to preview.
+- **Accountability** — exports, erasures, licence downloads, consents and purges
+  are recorded in the `processing_log` table and shown per marshal in the admin UI.
+
 ## Key business rules
 
 - A marshal cannot be **Confirmed** until their licence is uploaded *and*
