@@ -88,6 +88,66 @@ async function main() {
   }
   console.log('  ✓ test marshals + invitations');
 
+  // Confirmed stage marshals with full applications, so the rally-stage
+  // coverage panel and stage auto-assignment have data to work with.
+  const allDays = ['Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const stageMarshals = [
+    { surname: 'Adeyemi', forenames: 'Tunde', shift: 'am', days: allDays },
+    { surname: 'Bianchi', forenames: 'Lucia', shift: 'pm', days: allDays },
+    { surname: 'Cole', forenames: 'Ryan', shift: 'no_preference', days: ['Thursday', 'Friday'] },
+    { surname: 'Dewan', forenames: 'Priya', shift: 'am', days: ['Saturday', 'Sunday'] },
+    { surname: 'Ellis', forenames: 'Mark', shift: 'pm', days: allDays },
+    { surname: 'Forsyth', forenames: 'Kate', shift: 'no_preference', days: allDays },
+  ];
+
+  let n = 100;
+  for (const m of stageMarshals) {
+    n += 1;
+    const email = `${m.forenames}.${m.surname}@example.com`.toLowerCase();
+    const mr = await db.query(
+      `INSERT INTO marshals
+         (surname, forenames, email, phone_mobile, msuk_licence_number, msuk_licence_grades,
+          wdmc_member_number, ora_experienced, licence_upload_path, licence_verified, licence_verified_by, licence_verified_at)
+       VALUES ($1,$2,$3,$4,$5,'Marshal',$6,false,'seed/verified',true,$7,NOW())
+       ON CONFLICT (email) DO UPDATE SET licence_verified = true, licence_verified_by = $7, licence_verified_at = NOW()
+       RETURNING id`,
+      [m.surname, m.forenames, email, `077009${String(n).padStart(5, '0')}`, `MS${9000 + n}`, String(n), coordinatorId]
+    );
+    const marshalId = mr.rows[0].id;
+
+    let invId;
+    const inv = await db.query('SELECT id FROM invitations WHERE event_id = $1 AND marshal_id = $2', [event.id, marshalId]);
+    if (inv.rows[0]) {
+      invId = inv.rows[0].id;
+      await db.query("UPDATE invitations SET status = 'accepted', responded_at = NOW() WHERE id = $1", [invId]);
+    } else {
+      const r = await db.query(
+        `INSERT INTO invitations (event_id, marshal_id, email, token, status, responded_at, created_by)
+         VALUES ($1,$2,$3,$4,'accepted',NOW(),$5) RETURNING id`,
+        [event.id, marshalId, email, uuidv4(), coordinatorId]
+      );
+      invId = r.rows[0].id;
+    }
+
+    const appRes = await db.query(
+      `INSERT INTO applications
+         (event_id, marshal_id, invitation_id, status, arrival_day, marshalling_days,
+          departure_option, role_preference, stage_shift_preference, accommodation_type,
+          barbie_attending, total_due, signature_name)
+       VALUES ($1,$2,$3,'confirmed','Thursday',$4,'monday_morning','stage',$5,'tent',false,15.00,$6)
+       ON CONFLICT (event_id, marshal_id) DO UPDATE SET status = 'confirmed', role_preference = 'stage', stage_shift_preference = EXCLUDED.stage_shift_preference, marshalling_days = EXCLUDED.marshalling_days
+       RETURNING id`,
+      [event.id, marshalId, invId, m.days, m.shift, `${m.forenames} ${m.surname}`]
+    );
+    const appId = appRes.rows[0].id;
+    await db.query(
+      `INSERT INTO shirt_orders (application_id, size, quantity, unit_price)
+       SELECT $1,'L',1,15.00 WHERE NOT EXISTS (SELECT 1 FROM shirt_orders WHERE application_id = $1)`,
+      [appId]
+    );
+  }
+  console.log(`  ✓ ${stageMarshals.length} confirmed stage marshals (try Schedule → Auto-assign stage)`);
+
   console.log('\nSeed complete.');
   console.log('Logins:');
   console.log('  Coordinator: jon@marshpoint.co.uk / changeme123');

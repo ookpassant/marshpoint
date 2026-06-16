@@ -116,6 +116,44 @@ Then open `http://localhost:8080`. Override the placeholder secrets
 (`DB_PASSWORD`, `JWT_SECRET`, SMTP settings, …) with a `.env` file beside
 `docker-compose.yml`.
 
+The Docker stack also runs **Mailpit**, a fake SMTP server that catches all
+outgoing email so you can see invitations and confirmations during testing.
+Open the inbox at `http://localhost:8025`.
+
+## Email & deliverability
+
+Marshpoint sends via SMTP (Nodemailer), configured entirely through the
+`SMTP_*` environment variables — so you choose the transport per environment.
+
+**Local/dev:** point `SMTP_HOST`/`SMTP_PORT` at Mailpit (the Docker stack does
+this automatically) and read mail at `http://localhost:8025`.
+
+**Production — staying out of spam.** Don't send directly from the VPS:
+self-hosted IPs are usually on blocklists and lack a sending reputation. Instead
+use a reputable transactional email provider (Brevo, Mailgun, Postmark, Amazon
+SES, etc.) and point the `SMTP_*` variables at their relay. Then:
+
+1. **Authenticate your domain** with all three DNS records — this is what stops
+   mail going to spam:
+   - **SPF** — a TXT record authorising the provider to send for your domain.
+   - **DKIM** — the provider gives you keys/CNAMEs to publish; they cryptographically
+     sign each message.
+   - **DMARC** — a TXT record (`_dmarc.yourdomain`) tying it together and telling
+     receivers what to do with failures (start at `p=none`, tighten later).
+   Most providers walk you through these and verify them in their dashboard.
+2. **Send from your own domain.** Set `EMAIL_FROM_ADDRESS` to an address on the
+   domain you authenticated (e.g. `marshals@yourclub.org`), not a free
+   `@gmail.com`/`@outlook.com` address — those fail DMARC alignment and get
+   filtered. Keep `EMAIL_FROM_NAME` consistent.
+3. **Use a real, monitored reply-to** and keep volume reasonable; the templates
+   are plain text, which already helps.
+4. **If you must self-host Postfix:** also set a matching reverse-DNS (PTR)
+   record for the server IP, plus SPF/DKIM/DMARC — but a relay is strongly
+   recommended.
+
+Every send is recorded in the `comms_log` table (with the error on failure), so
+delivery problems are visible in the Communications log.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push to `main` and on pull requests:
