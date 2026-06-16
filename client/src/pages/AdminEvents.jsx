@@ -9,7 +9,7 @@ const STATUSES = ['draft', 'inviting', 'closed', 'complete'];
 const BLANK = {
   name: '', year: new Date().getFullYear(), start_date: '', end_date: '',
   location: '', description: '', status: 'draft',
-  ora_team_size_target: 20, stage_shifts_per_day: 2, stage_changeover_time: '12:30',
+  ora_team_size_target: 20, stage_shift_target: 10, stage_shifts_per_day: 2, stage_changeover_time: '12:30',
   stage_direction: 'anticlockwise', shirt_price: '15.00', barbie_price: '15.00',
   shirts_ordered: false, bacs_account_name: '', bacs_sort_code: '', bacs_account_number: '',
 };
@@ -32,6 +32,7 @@ function EventForm({ initial, onSave, onCancel, busy, error }) {
       <div className="field"><label className="field-label">Description</label><textarea value={f.description || ''} onChange={(e) => set('description', e.target.value)} /></div>
       <div className="row row-wrap">
         <div className="col" style={{ minWidth: 130 }}><div className="field"><label className="field-label">Status</label><select value={f.status} onChange={(e) => set('status', e.target.value)}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></div></div>
+        <div className="col" style={{ minWidth: 130 }}><div className="field"><label className="field-label">Stage target / shift</label><input type="number" value={f.stage_shift_target} onChange={(e) => set('stage_shift_target', e.target.value)} /></div></div>
         <div className="col" style={{ minWidth: 130 }}><div className="field"><label className="field-label">ORA team target</label><input type="number" value={f.ora_team_size_target} onChange={(e) => set('ora_team_size_target', e.target.value)} /></div></div>
       </div>
       <div className="row row-wrap">
@@ -72,6 +73,7 @@ export default function AdminEvents() {
       ...form,
       year: parseInt(form.year, 10),
       ora_team_size_target: parseInt(form.ora_team_size_target, 10) || 20,
+      stage_shift_target: parseInt(form.stage_shift_target, 10) || 10,
       stage_shifts_per_day: parseInt(form.stage_shifts_per_day, 10) || 2,
       shirt_price: form.shirt_price, barbie_price: form.barbie_price,
     };

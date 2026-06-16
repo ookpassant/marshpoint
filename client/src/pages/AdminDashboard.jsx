@@ -68,6 +68,31 @@ export default function AdminDashboard() {
         <StatCard label="Paid" value={s.applications.paid} sub={`of ${s.applications.confirmed} confirmed`} />
       </div>
 
+      {/* Rally stage is the priority team — shown first. */}
+      {s.stage && (
+        <div className="card mb" style={s.stage.anyBelow ? { borderLeft: '3px solid var(--color-orange)' } : undefined}>
+          <div className="spread mb">
+            <div className="eyebrow">Rally stage coverage — priority team</div>
+            <span className="metadata">target {s.stage.target}/shift · {s.stage.applicants} stage applicant(s)</span>
+          </div>
+          {s.stage.days.length === 0 ? <span className="muted">No event days yet.</span> : (
+            <table className="data">
+              <thead><tr><th>Day</th><th>AM</th><th>PM</th></tr></thead>
+              <tbody>
+                {s.stage.days.map((d) => (
+                  <tr key={d.day_name}>
+                    <td>{d.day_name}</td>
+                    <td style={d.amBelow ? { color: 'var(--color-orange)', fontWeight: 700 } : undefined}>{d.am} / {s.stage.target}{d.amBelow ? ' ⚠' : ''}</td>
+                    <td style={d.pmBelow ? { color: 'var(--color-orange)', fontWeight: 700 } : undefined}>{d.pm} / {s.stage.target}{d.pmBelow ? ' ⚠' : ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <div className="mt"><button className="btn btn-secondary btn-sm" onClick={() => navigate('/admin/schedule')}>Open schedule →</button></div>
+        </div>
+      )}
+
       <div className="row row-wrap mb">
         <StatCard label="ORA Team A" value={`${s.ora.teamA} / ${s.ora.target}`} warn={s.ora.teamABelow} sub={s.ora.teamABelow ? 'Below target' : 'On target'} />
         <StatCard label="ORA Team B" value={`${s.ora.teamB} / ${s.ora.target}`} warn={s.ora.teamBBelow} sub={s.ora.teamBBelow ? 'Below target' : 'On target'} />
