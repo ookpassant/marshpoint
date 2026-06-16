@@ -1,0 +1,60 @@
+# Local / single-host deployment of the full Marshpoint stack.
+#
+#   docker compose up --build
+#
+# Then open http://localhost:8080 . The web container serves the React build
+# and proxies /api to the server container. The server runs DB migrations on
+# start. Override the placeholder secrets via a .env file next to this one.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-marshalapp}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-marshals}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-marshalapp} -d ${DB_NAME:-marshals}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: ./server
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-marshals}
+      DB_USER: ${DB_USER:-marshalapp}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret}
+      JWT_EXPIRY: ${JWT_EXPIRY:-12h}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      UPLOAD_DIR: /var/marshal-uploads
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_SECURE: "false"
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Marshpoint}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@marshpoint.co.uk}
+      COORDINATOR_NAME: ${COORDINATOR_NAME:-Jon}
+      NODE_ENV: production
+    # Apply migrations before booting the API.
+    command: sh -c "node db/migrate.js && node app.js"
+    volumes:
+      - uploads:/var/marshal-uploads
+
+  web:
+    build: ./client
+    depends_on:
+      - server
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  uploads:
