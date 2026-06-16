@@ -3,8 +3,36 @@ const fs = require('fs');
 const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { upload, supersedeOldLicence } = require('../middleware/upload');
+const { sendMail } = require('../email/mailer');
 
 const router = express.Router();
+
+// Business rule #9: notify the coordinator immediately when a marshal cancels.
+async function notifyCancellation(applicationId, sentBy) {
+  const coordEmail = process.env.EMAIL_FROM_ADDRESS;
+  if (!coordEmail) return;
+  try {
+    const { rows } = await db.query(
+      `SELECT a.event_id, a.marshal_id, e.name AS event_name, e.start_date,
+              m.forenames, m.surname, m.phone_mobile
+       FROM applications a JOIN events e ON e.id = a.event_id JOIN marshals m ON m.id = a.marshal_id
+       WHERE a.id = $1`,
+      [applicationId]
+    );
+    if (!rows[0]) return;
+    const r = rows[0];
+    const daysToGo = Math.ceil((new Date(r.start_date) - new Date()) / 86400000);
+    const proximity = daysToGo >= 0 ? `${daysToGo} day(s) before the event` : 'after the event start';
+    sendMail({
+      to: coordEmail,
+      subject: `CANCELLATION: ${r.forenames} ${r.surname} — ${r.event_name}`,
+      text: `${r.forenames} ${r.surname} (${r.phone_mobile}) has been marked as cancelled for ${r.event_name}, ${proximity}.`,
+      type: 'general', eventId: r.event_id, marshalId: r.marshal_id, applicationId, sentBy,
+    }).catch(() => {});
+  } catch (err) {
+    console.error('Cancellation notification failed:', err.message);
+  }
+}
 
 // Build a joined application row used by list and detail views.
 const APP_SELECT = `
@@ -125,6 +153,13 @@ router.put('/admin/applications/:id', requireAuth, requireCoordinator, async (re
     }
   }
 
+  // Detect a transition into 'cancelled' so we can notify the coordinator.
+  let priorStatus = null;
+  if (b.status === 'cancelled') {
+    const prev = await db.query('SELECT status FROM applications WHERE id = $1', [req.params.id]);
+    priorStatus = prev.rows[0] && prev.rows[0].status;
+  }
+
   sets.push('updated_at = NOW()');
   vals.push(req.params.id);
   try {
@@ -133,6 +168,9 @@ router.put('/admin/applications/:id', requireAuth, requireCoordinator, async (re
       vals
     );
     if (!rows[0]) return res.status(404).json({ error: 'Application not found' });
+    if (b.status === 'cancelled' && priorStatus !== 'cancelled') {
+      notifyCancellation(req.params.id, req.user.userId);
+    }
     res.json(rows[0]);
   } catch (err) {
     console.error(err);
