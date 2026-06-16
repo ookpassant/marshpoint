@@ -150,7 +150,7 @@ router.put('/admin/applications/:id/verify-licence', requireAuth, requireCoordin
     const { rows } = await db.query(
       `UPDATE marshals
        SET licence_verified = $1,
-           licence_verified_by = CASE WHEN $1 THEN $2 ELSE NULL END,
+           licence_verified_by = CASE WHEN $1 THEN $2::int ELSE NULL END,
            licence_verified_at = CASE WHEN $1 THEN NOW() ELSE NULL END,
            updated_at = NOW()
        WHERE id = $3 RETURNING licence_verified, licence_verified_at`,

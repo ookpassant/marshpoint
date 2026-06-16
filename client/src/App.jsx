@@ -1,0 +1,55 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './auth';
+import { EventProvider } from './components/EventContext';
+import AdminLayout from './components/AdminLayout';
+
+import MarshalForm from './pages/MarshalForm';
+import MarshalStatus from './pages/MarshalStatus';
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminApplications from './pages/AdminApplications';
+import AdminSchedule from './pages/AdminSchedule';
+import AdminComms from './pages/AdminComms';
+import AdminPayments from './pages/AdminPayments';
+import AdminReports from './pages/AdminReports';
+import CommitteeView from './pages/CommitteeView';
+
+// Admin section wraps the layout in the event provider so every screen
+// shares the active-event selection.
+function AdminSection() {
+  return (
+    <EventProvider>
+      <AdminLayout />
+    </EventProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public marshal-facing routes */}
+          <Route path="/apply/:token" element={<MarshalForm />} />
+          <Route path="/status/:token" element={<MarshalStatus />} />
+
+          {/* Admin */}
+          <Route path="/admin/login" element={<Login />} />
+          <Route path="/admin" element={<AdminSection />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="applications" element={<AdminApplications />} />
+            <Route path="schedule" element={<AdminSchedule />} />
+            <Route path="comms" element={<AdminComms />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="committee" element={<CommitteeView />} />
+          </Route>
+
+          <Route path="/" element={<Navigate to="/admin" replace />} />
+          <Route path="*" element={<Navigate to="/admin" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
