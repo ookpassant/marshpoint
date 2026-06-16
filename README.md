@@ -151,8 +151,9 @@ Once signed in, coordinators get a full lifecycle toolkit:
   ORA-experience flag, and per-marshal event history
 - **Schedule** — editable grid, ORA Team A/B auto-assign (preview + commit),
   lock-and-notify, daily roster view, CSV export
-- **Communications** — templated and custom emails to recipient groups, plus a
-  full send log
+- **Communications** — templated and custom emails to recipient groups, an
+  editable email-template manager (global defaults with per-event overrides and
+  live preview), plus a full send log
 - **Payments** and **Reports** (shirt order, barbie count, financials, daily roster)
 
 Committee members see a read-only subset (dashboard, applications, payments,

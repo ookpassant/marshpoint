@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { sendMail } = require('../email/mailer');
-const { templates } = require('../email/templates');
+const { renderTemplate } = require('../email/render');
 const { buildMergeFields } = require('../util/helpers');
 
 const router = express.Router();
@@ -57,7 +57,7 @@ async function createOne(eventId, item, userId, event, sendEmail) {
       event,
       token,
     });
-    const { subject, text } = templates.invitation(fields);
+    const { subject, text } = await renderTemplate('invitation', eventId, fields);
     await sendMail({
       to: email, subject, text, type: 'invitation',
       eventId, marshalId, sentBy: userId,
@@ -125,7 +125,7 @@ router.post('/admin/events/:id/invitations/remind', requireAuth, requireCoordina
         event,
         token: inv.token,
       });
-      const { subject, text } = templates.reminder(fields);
+      const { subject, text } = await renderTemplate('reminder', eventId, fields);
       const r = await sendMail({
         to: inv.email, subject, text, type: 'reminder',
         eventId, marshalId: inv.marshal_id, sentBy: req.user.userId,

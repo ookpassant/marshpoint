@@ -167,6 +167,33 @@ test('API integration — full lifecycle', async (t) => {
       assert.strictEqual(res.status, 200);
       assert.ok(text.startsWith('id,surname,forenames'));
     });
+
+    await t.test('email template: override is saved, surfaced and used when sending', async () => {
+      const put = await call('PUT', '/admin/email-templates', { token: coordToken, body: {
+        type: 'payment_request', subject: 'CUSTOM {{event_name}} pay', body: 'You owe £{{total_due}}. Ref {{payment_ref}}.',
+      } });
+      assert.strictEqual(put.status, 200);
+
+      const list = await call('GET', '/admin/email-templates', { token: coordToken });
+      const pr = list.body.find((t) => t.type === 'payment_request');
+      assert.strictEqual(pr.has_override, true);
+      assert.ok(pr.subject.startsWith('CUSTOM'));
+
+      // Send is attempted and logged even if SMTP delivery fails in the test env;
+      // the logged subject proves the override was the template that got rendered.
+      await call('POST', `/admin/events/${eventId}/comms/payment-request`, { token: coordToken, body: { recipients: 'unpaid' } });
+      const comms = await call('GET', `/admin/events/${eventId}/comms`, { token: coordToken });
+      const latest = comms.body.find((c) => c.type === 'payment_request');
+      assert.ok(latest && latest.subject.startsWith('CUSTOM '), `expected override subject, got: ${latest && latest.subject}`);
+
+      const del = await call('DELETE', '/admin/email-templates/payment_request', { token: coordToken });
+      assert.strictEqual(del.status, 200);
+    });
+
+    await t.test('email template: committee cannot edit (403)', async () => {
+      const r = await call('PUT', '/admin/email-templates', { token: cmteToken, body: { type: 'reminder', subject: 'x', body: 'y' } });
+      assert.strictEqual(r.status, 403);
+    });
   } finally {
     server.close();
     await db.pool.end();

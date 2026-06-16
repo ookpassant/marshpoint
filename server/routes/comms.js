@@ -2,8 +2,8 @@ const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { sendMail } = require('../email/mailer');
-const { templates } = require('../email/templates');
-const { buildMergeFields, calculateTotal } = require('../util/helpers');
+const { renderTemplate, renderMerge } = require('../email/render');
+const { buildMergeFields } = require('../util/helpers');
 
 const router = express.Router();
 
@@ -69,33 +69,33 @@ async function sendToRecipients({ eventId, event, recipients, templateName, type
   const errors = [];
   for (const r of recipients) {
     if (!r.email) continue;
-    const fields = buildMergeFields({
+    const data = buildMergeFields({
       marshal: { forenames: r.forenames, preferred_name: r.preferred_name, surname: r.surname, email: r.email },
       event,
       token: r.token,
     });
 
+    // Payment-request needs per-recipient cost + BACS merge fields.
+    if (templateName === 'payment_request') {
+      const addonTotal = r.barbie_attending ? Number(event.barbie_price) : 0;
+      const shirtTotal = Math.max(0, Number(r.total_due || 0) - addonTotal);
+      Object.assign(data, {
+        total_due: Number(r.total_due || 0).toFixed(2),
+        shirt_total: shirtTotal.toFixed(2),
+        addon_line: addonTotal > 0 ? `\n  - ${event.addon_label || 'Optional extra'}: £${addonTotal.toFixed(2)}` : '',
+        payment_ref: `${data.event_short}/${data.marshal_surname}`,
+        bacs_account_name: event.bacs_account_name || '[ACCOUNT NAME]',
+        bacs_sort_code: event.bacs_sort_code || '[SORT CODE]',
+        bacs_account_number: event.bacs_account_number || '[ACCOUNT NUMBER]',
+      });
+    }
+
     let subject, text;
     if (templateName === 'custom') {
-      subject = renderMerge(customSubject || '', fields);
-      text = renderMerge(customBody || '', fields);
-    } else if (templateName === 'payment_request') {
-      const addonTotal = r.barbie_attending ? Number(event.barbie_price) : 0;
-      const shirtTotal = Number(r.total_due || 0) - addonTotal;
-      const built = templates.payment_request({
-        ...fields,
-        total_due: Number(r.total_due || 0).toFixed(2),
-        shirt_total: Math.max(0, shirtTotal).toFixed(2),
-        addon_total: addonTotal.toFixed(2),
-        addon_label: event.addon_label || 'Optional extra',
-        bacs_account_name: event.bacs_account_name,
-        bacs_sort_code: event.bacs_sort_code,
-        bacs_account_number: event.bacs_account_number,
-      });
-      subject = built.subject; text = built.text;
+      subject = renderMerge(customSubject || '', data);
+      text = renderMerge(customBody || '', data);
     } else {
-      const built = templates[templateName](fields);
-      subject = built.subject; text = built.text;
+      ({ subject, text } = await renderTemplate(templateName, eventId, data));
     }
 
     const result = await sendMail({
@@ -106,10 +106,6 @@ async function sendToRecipients({ eventId, event, recipients, templateName, type
     else errors.push({ email: r.email, error: result.error });
   }
   return { sent, total: recipients.length, errors };
-}
-
-function renderMerge(str, fields) {
-  return String(str).replace(/\{\{(\w+)\}\}/g, (_, k) => (fields[k] != null ? fields[k] : ''));
 }
 
 async function loadEvent(eventId) {

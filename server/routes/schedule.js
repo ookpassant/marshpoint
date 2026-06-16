@@ -4,7 +4,7 @@ const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { autoAssignOra } = require('../util/oraAssign');
 const { autoAssignStage } = require('../util/stageAssign');
 const { sendMail } = require('../email/mailer');
-const { templates } = require('../email/templates');
+const { renderTemplate } = require('../email/render');
 const { buildMergeFields } = require('../util/helpers');
 const { toCsv } = require('./applications');
 
@@ -264,7 +264,7 @@ router.put('/admin/events/:id/schedule/lock', requireAuth, requireCoordinator, a
       for (const m of affected.rows) {
         if (!m.email || !m.token) continue;
         const fields = buildMergeFields({ marshal: m, event, token: m.token });
-        const { subject, text } = templates.schedule_update(fields);
+        const { subject, text } = await renderTemplate('schedule_update', eventId, fields);
         const r = await sendMail({
           to: m.email, subject, text, type: 'schedule_update',
           eventId, marshalId: m.marshal_id, applicationId: m.id, sentBy: req.user.userId,

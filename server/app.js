@@ -13,6 +13,7 @@ const applyRoutes = require('./routes/apply');
 const { router: applicationRoutes } = require('./routes/applications');
 const scheduleRoutes = require('./routes/schedule');
 const commsRoutes = require('./routes/comms');
+const emailTemplateRoutes = require('./routes/emailTemplates');
 const paymentRoutes = require('./routes/payments');
 const reportRoutes = require('./routes/reports');
 
@@ -45,6 +46,7 @@ app.use('/api', invitationRoutes);
 app.use('/api', applicationRoutes);
 app.use('/api', scheduleRoutes);
 app.use('/api', commsRoutes);
+app.use('/api', emailTemplateRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api', reportRoutes);
 

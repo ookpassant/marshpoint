@@ -52,6 +52,12 @@ function buildMergeFields({ marshal, event, token }) {
     event_short: event ? String(event.name || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 16) : '',
     organisation_name: event && event.organisation_name ? event.organisation_name : '',
     coordinator_name: coordinatorName(),
+    // Sign-off: coordinator name, with the organisation underneath when set.
+    signoff: event && event.organisation_name
+      ? `${coordinatorName()}\n${event.organisation_name}`
+      : coordinatorName(),
+    // For the licence template ("your 2026 MSUK licence"); blank if no year.
+    licence_year: event && event.year ? `${event.year} ` : '',
     apply_url: token ? `${base}/apply/${token}` : '',
     status_url: token ? `${base}/status/${token}` : '',
   };
