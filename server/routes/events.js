@@ -43,8 +43,8 @@ router.post('/admin/events', requireAuth, requireCoordinator, async (req, res) =
   // avoids COALESCE type-inference issues against typed columns (time, numeric).
   const optional = [
     'location', 'description', 'status', 'ora_team_size_target', 'stage_shifts_per_day',
-    'stage_changeover_time', 'stage_direction', 'shirt_price', 'barbie_price',
-    'shirts_ordered', 'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
+    'stage_shift_target', 'stage_changeover_time', 'stage_direction', 'shirt_price',
+    'barbie_price', 'shirts_ordered', 'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
   ];
   const cols = ['name', 'year', 'start_date', 'end_date'];
   const vals = [b.name, b.year, b.start_date, b.end_date];
@@ -93,7 +93,7 @@ router.put('/admin/events/:id', requireAuth, requireCoordinator, async (req, res
   const b = req.body || {};
   const allowed = [
     'name', 'year', 'start_date', 'end_date', 'location', 'description', 'status',
-    'ora_team_size_target', 'stage_shifts_per_day', 'stage_changeover_time',
+    'ora_team_size_target', 'stage_shifts_per_day', 'stage_shift_target', 'stage_changeover_time',
     'stage_direction', 'shirt_price', 'barbie_price', 'shirts_ordered',
     'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
   ];
@@ -126,7 +126,7 @@ router.put('/admin/events/:id', requireAuth, requireCoordinator, async (req, res
 router.get('/admin/events/:id/summary', requireAuth, async (req, res) => {
   const eventId = req.params.id;
   try {
-    const [event, invites, apps, shirts] = await Promise.all([
+    const [event, invites, apps, shirts, stageCover] = await Promise.all([
       db.query('SELECT * FROM events WHERE id = $1', [eventId]),
       db.query('SELECT status, COUNT(*)::int AS n FROM invitations WHERE event_id = $1 GROUP BY status', [eventId]),
       db.query(
@@ -141,6 +141,18 @@ router.get('/admin/events/:id/summary', requireAuth, async (req, res) => {
          JOIN applications a ON a.id = s.application_id
          WHERE a.event_id = $1
          GROUP BY s.size`,
+        [eventId]
+      ),
+      // Per-day stage staffing from the schedule (stage_full counts to both shifts).
+      db.query(
+        `SELECT ed.id, ed.day_name, ed.date,
+                COUNT(*) FILTER (WHERE sa.role IN ('stage_am','stage_full'))::int AS am,
+                COUNT(*) FILTER (WHERE sa.role IN ('stage_pm','stage_full'))::int AS pm
+         FROM event_days ed
+         LEFT JOIN schedule_assignments sa ON sa.event_day_id = ed.id
+         WHERE ed.event_id = $1
+         GROUP BY ed.id, ed.day_name, ed.date
+         ORDER BY ed.date`,
         [eventId]
       ),
     ]);
@@ -186,6 +198,17 @@ router.get('/admin/events/:id/summary', requireAuth, async (req, res) => {
       shirtTotalQty += r.qty;
     }
 
+    // Stage coverage: per-day AM/PM assigned vs target.
+    const stageTarget = event.rows[0].stage_shift_target || 10;
+    const stageDays = stageCover.rows.map((r) => ({
+      day_name: r.day_name,
+      am: r.am,
+      pm: r.pm,
+      amBelow: r.am < stageTarget,
+      pmBelow: r.pm < stageTarget,
+    }));
+    const stageAnyBelow = stageDays.some((d) => d.amBelow || d.pmBelow);
+
     res.json({
       event: event.rows[0],
       invitations: { total: totalInvited, byStatus: invitesByStatus },
@@ -195,6 +218,8 @@ router.get('/admin/events/:id/summary', requireAuth, async (req, res) => {
         confirmed: statusCounts.confirmed,
         paid: applications.filter((a) => a.payment_received).length,
       },
+      // Stage is the priority team — listed first.
+      stage: { target: stageTarget, days: stageDays, anyBelow: stageAnyBelow, applicants: roleStage },
       ora: { teamA, teamB, target, teamABelow: teamA < target, teamBBelow: teamB < target },
       roles: { ora: roleOra, stage: roleStage, flexible: roleFlexible },
       licences: { verified: licVerified, pending: licUploaded, missing: licMissing },

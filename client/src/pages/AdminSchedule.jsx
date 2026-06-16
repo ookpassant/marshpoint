@@ -18,7 +18,8 @@ function groupOf(m) {
   if (m.role_preference === 'stage') return 'Stage';
   return 'Unassigned';
 }
-const GROUP_ORDER = ['ORA Team A', 'ORA Team B', 'Stage', 'Unassigned'];
+// Stage is the priority team — listed first.
+const GROUP_ORDER = ['Stage', 'ORA Team A', 'ORA Team B', 'Unassigned'];
 
 export default function AdminSchedule() {
   const { activeId } = useEvents();
@@ -28,6 +29,7 @@ export default function AdminSchedule() {
   const [msg, setMsg] = useState('');
   const [rosterView, setRosterView] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [stagePreview, setStagePreview] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
@@ -81,6 +83,20 @@ export default function AdminSchedule() {
       setPreview(null); setMsg('ORA teams assigned (provisional).'); load();
     } catch (err) { setMsg(errMessage(err)); } finally { setBusy(false); }
   }
+  async function runStageAssign() {
+    setBusy(true); setMsg('');
+    try {
+      const res = await api.post(`/admin/events/${activeId}/schedule/auto-assign-stage`, { commit: false });
+      setStagePreview(res.data);
+    } catch (err) { setMsg(errMessage(err)); } finally { setBusy(false); }
+  }
+  async function commitStageAssign() {
+    setBusy(true);
+    try {
+      await api.post(`/admin/events/${activeId}/schedule/auto-assign-stage`, { commit: true });
+      setStagePreview(null); setMsg('Stage shifts assigned (provisional).'); load();
+    } catch (err) { setMsg(errMessage(err)); } finally { setBusy(false); }
+  }
   async function lockSchedule() {
     if (!window.confirm('Lock the schedule? This marks all assignments final and emails affected marshals.')) return;
     setBusy(true); setMsg('');
@@ -104,7 +120,8 @@ export default function AdminSchedule() {
         <h2 style={{ margin: 0 }}>Schedule</h2>
         <div className="row gap-sm row-wrap">
           <button className="btn btn-ghost btn-sm" onClick={() => setRosterView((v) => !v)}>{rosterView ? 'Grid view' : 'Daily roster'}</button>
-          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={runAutoAssign}>Auto-assign ORA</button>
+          <button className="btn btn-secondary btn-sm" disabled={busy} onClick={runStageAssign}>Auto-assign stage</button>
+          <button className="btn btn-ghost btn-sm" disabled={busy} onClick={runAutoAssign}>Auto-assign ORA</button>
           <button className="btn btn-primary btn-sm" disabled={busy} onClick={lockSchedule}>Lock schedule</button>
           <button className="btn btn-ghost btn-sm" onClick={() => downloadFile(`/admin/events/${activeId}/schedule/export`, 'schedule.csv')}>Export CSV</button>
         </div>
@@ -164,6 +181,32 @@ export default function AdminSchedule() {
                 <tbody>{preview.diff.map((d) => <tr key={d.id}><td>{d.name}</td><td>{d.from || '—'}</td><td><strong>{d.to}</strong></td></tr>)}</tbody>
               </table>
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Stage auto-assign preview */}
+      <Modal open={!!stagePreview} title="Stage auto-assign preview" onClose={() => setStagePreview(null)} width={520}
+        footer={<div className="spread"><button className="btn btn-ghost btn-sm" onClick={() => setStagePreview(null)}>Cancel</button><button className="btn btn-primary btn-sm" disabled={busy} onClick={commitStageAssign}>Commit (provisional)</button></div>}>
+        {stagePreview && (
+          <div>
+            <p>{stagePreview.candidates} stage marshal(s), target {stagePreview.target}/shift. {stagePreview.changes} assignment(s) would change.</p>
+            <table className="data mb"><thead><tr><th>Day</th><th>AM</th><th>PM</th></tr></thead>
+              <tbody>{stagePreview.perDay.map((d) => (
+                <tr key={d.day_name}>
+                  <td>{d.day_name}</td>
+                  <td style={d.am < stagePreview.target ? { color: 'var(--color-orange)', fontWeight: 700 } : undefined}>{d.am} / {stagePreview.target}</td>
+                  <td style={d.pm < stagePreview.target ? { color: 'var(--color-orange)', fontWeight: 700 } : undefined}>{d.pm} / {stagePreview.target}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+            {stagePreview.flagged.length > 0 && (
+              <div className="card card-accent">
+                <div className="eyebrow mb">Flagged for manual review ({stagePreview.flagged.length})</div>
+                {stagePreview.flagged.map((f) => <div key={f.id} className="metadata">{f.name}: {f.reason}</div>)}
+              </div>
+            )}
+            <div className="metadata mt">Locked (finalised) cells are left untouched. All new assignments are provisional.</div>
           </div>
         )}
       </Modal>

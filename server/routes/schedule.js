@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
 const { autoAssignOra } = require('../util/oraAssign');
+const { autoAssignStage } = require('../util/stageAssign');
 const { sendMail } = require('../email/mailer');
 const { templates } = require('../email/templates');
 const { buildMergeFields } = require('../util/helpers');
@@ -167,6 +168,65 @@ router.post('/admin/events/:id/schedule/auto-assign', requireAuth, requireCoordi
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Auto-assignment failed' });
+  }
+});
+
+// POST /api/admin/events/:id/schedule/auto-assign-stage — stage AM/PM (preview or commit)
+router.post('/admin/events/:id/schedule/auto-assign-stage', requireAuth, requireCoordinator, async (req, res) => {
+  const eventId = req.params.id;
+  const commit = req.body && req.body.commit === true;
+  try {
+    const ev = await db.query('SELECT stage_shift_target FROM events WHERE id = $1', [eventId]);
+    if (!ev.rows[0]) return res.status(404).json({ error: 'Event not found' });
+    const target = ev.rows[0].stage_shift_target || 10;
+
+    const days = await db.query('SELECT id, day_name, date FROM event_days WHERE event_id = $1 ORDER BY date', [eventId]);
+
+    // Candidates: stage marshals, plus flexible marshals not already on an ORA team.
+    const cand = await db.query(
+      `SELECT a.id, a.marshalling_days, a.stage_shift_preference, a.role_preference, a.ora_team,
+              (m.forenames || ' ' || m.surname) AS name
+       FROM applications a JOIN marshals m ON m.id = a.marshal_id
+       WHERE a.event_id = $1
+         AND a.status NOT IN ('cancelled','no_show')
+         AND (a.role_preference = 'stage' OR (a.role_preference = 'flexible' AND a.ora_team IS NULL))`,
+      [eventId]
+    );
+
+    // Existing assignments to avoid clobbering locked cells and to compute the diff.
+    const existRows = await db.query(
+      `SELECT sa.application_id, sa.event_day_id, sa.role, sa.provisional
+       FROM schedule_assignments sa JOIN applications a ON a.id = sa.application_id
+       WHERE a.event_id = $1`,
+      [eventId]
+    );
+    const existing = new Map(existRows.rows.map((r) => [`${r.application_id}:${r.event_day_id}`, { role: r.role, provisional: r.provisional }]));
+
+    const result = autoAssignStage(cand.rows, days.rows, target, existing);
+
+    const summary = {
+      target,
+      perDay: Object.values(result.perDay),
+      flagged: result.flagged,
+      changes: result.changes,
+      candidates: cand.rows.length,
+    };
+
+    if (!commit) return res.json({ committed: false, ...summary });
+
+    for (const as of result.assignments) {
+      await db.query(
+        `INSERT INTO schedule_assignments (application_id, event_day_id, role, provisional, assigned_by)
+         VALUES ($1,$2,$3,TRUE,$4)
+         ON CONFLICT (application_id, event_day_id)
+         DO UPDATE SET role = EXCLUDED.role, provisional = TRUE, assigned_by = EXCLUDED.assigned_by, assigned_at = NOW()`,
+        [as.application_id, as.event_day_id, as.role, req.user.userId]
+      );
+    }
+    res.json({ committed: true, ...summary });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Stage auto-assignment failed' });
   }
 });
 
