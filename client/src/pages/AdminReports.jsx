@@ -51,7 +51,7 @@ export default function AdminReports() {
 
         {/* Barbie */}
         <div className="card" style={{ flex: '1 1 220px' }}>
-          <h3>Sunday barbie</h3>
+          <h3>Add-on opt-ins</h3>
           <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-navy)' }}>{barbie.count}</div>
           <div className="metadata">attending · <Money value={barbie.value} /></div>
         </div>

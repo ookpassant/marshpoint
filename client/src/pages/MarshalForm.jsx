@@ -21,7 +21,7 @@ const EMPTY = {
   phone_mobile: '', phone_home: '', phone_work: '',
   motorsport_interests: [],
   msuk_licence_number: '', msuk_licence_grades: '', wdmc_member_number: '',
-  gfos_years_attended: 0, ora_experienced: false,
+  gfos_years_attended: 0, years_attended_event: '', ora_experienced: false,
   arrival_day: '', arrival_time_approx: '',
   marshalling_days: [], role_preference: '', stage_shift_preference: '',
   unavailable_notes: '',
@@ -120,11 +120,13 @@ export default function MarshalForm() {
   const showAccomSize = form.accommodation_type === 'caravan' || form.accommodation_type === 'campervan';
 
   const shirtPrice = event ? event.shirt_price : 15;
-  const barbiePrice = event ? event.barbie_price : 15;
+  const addonEnabled = !!(event && event.addon_enabled);
+  const addonLabel = (event && event.addon_label) || 'Optional extra';
+  const addonPrice = event ? Number(event.addon_price || 0) : 0;
   const shirtQty = form.shirts.reduce((s, r) => s + (parseInt(r.quantity, 10) || 0), 0);
   const shirtTotal = shirtQty * shirtPrice;
-  const barbieTotal = form.barbie_attending ? barbiePrice : 0;
-  const total = shirtTotal + barbieTotal;
+  const addonTotal = addonEnabled && form.barbie_attending ? addonPrice : 0;
+  const total = shirtTotal + addonTotal;
 
   function updateShirt(i, key, value) {
     setForm((f) => {
@@ -143,7 +145,7 @@ export default function MarshalForm() {
     req.forEach((f) => { if (!form[f] && form[f] !== 0) e[f] = 'Required'; });
     if (!form.marshalling_days.length) e.marshalling_days = 'Pick at least one day';
     if (showStageShift && !form.stage_shift_preference) e.stage_shift_preference = 'Required';
-    if (form.barbie_attending === null) e.barbie_attending = 'Required';
+    if (addonEnabled && form.barbie_attending === null) e.barbie_attending = 'Required';
     if (showAccomSize) {
       if (!form.accommodation_size_l) e.accommodation_size_l = 'Required';
       if (!form.accommodation_size_w) e.accommodation_size_w = 'Required';
@@ -190,7 +192,7 @@ export default function MarshalForm() {
   }
 
   async function decline() {
-    if (!window.confirm("Let Jon know you can't make it this year?")) return;
+    if (!window.confirm("Let the organisers know you can't make it this year?")) return;
     try {
       await api.post(`/apply/${token}/decline`);
       localStorage.removeItem(draftKey);
@@ -209,7 +211,7 @@ export default function MarshalForm() {
       <PublicLayout>
         <div className="card">
           <h2>Thanks for letting us know</h2>
-          <p>No problem at all — we've told Jon you can't make {event.name} this year. Hope to see you next time!</p>
+          <p>No problem at all — we've let the organisers know you can't make {event.name} this year. Hope to see you next time!</p>
         </div>
       </PublicLayout>
     );
@@ -220,14 +222,14 @@ export default function MarshalForm() {
       <PublicLayout>
         <div className="card">
           <h2>You're in 🎉</h2>
-          <p>Thanks for applying to marshal at <strong>{event.name}</strong>. Jon will be in touch once the schedule is sorted.</p>
+          <p>Thanks for applying to marshal at <strong>{event.name}</strong>. We'll be in touch once the schedule is sorted.</p>
           <div className="card card-accent mt mb">
             <div className="eyebrow">What you'll owe (later)</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-navy)' }}><Money value={result.total_due} /></div>
-            <div className="metadata">You won't be asked to pay yet — Jon will contact you when shirts are ordered.</div>
+            <div className="metadata">You won't be asked to pay yet — we'll contact you when shirts are ordered.</div>
           </div>
           {result.licence_outstanding && (
-            <Alert kind="warn">We still need your MSUK licence before we can confirm your place. No licence = no GFoS. Upload it from your status page.</Alert>
+            <Alert kind="warn">We still need your MSUK licence before we can confirm your place. No licence = no marshalling. Upload it from your status page.</Alert>
           )}
           <Link className="btn btn-primary" to={`/status/${token}`}>View my status</Link>
         </div>
@@ -278,8 +280,11 @@ export default function MarshalForm() {
           <Field label="Licence upload" hint="PDF, JPG or PNG, max 10MB. You can also add this later, but we can't confirm your place without it.">
             <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setLicenceFile(e.target.files[0] || null)} />
           </Field>
-          <Field label="WDMC membership number" required hint='Enter your number, or "TBC" if joining, or "N/A" for Comp Safari' error={errors.wdmc_member_number}><input value={form.wdmc_member_number} onChange={(e) => set('wdmc_member_number', e.target.value)} /></Field>
-          <Field label="Years attended GFoS" hint="0 if this is your first time"><input type="number" min="0" value={form.gfos_years_attended} onChange={(e) => set('gfos_years_attended', e.target.value)} /></Field>
+          <Field label="Club membership number" required hint='Enter your number, "TBC" if joining, or "N/A" if not applicable' error={errors.wdmc_member_number}><input value={form.wdmc_member_number} onChange={(e) => set('wdmc_member_number', e.target.value)} /></Field>
+          <div className="row row-wrap">
+            <div className="col" style={{ minWidth: 160 }}><Field label="Years of marshalling experience" hint="0 if you're new to marshalling"><input type="number" min="0" value={form.gfos_years_attended} onChange={(e) => set('gfos_years_attended', e.target.value)} /></Field></div>
+            <div className="col" style={{ minWidth: 160 }}><Field label={`Years you've marshalled at ${event.name} before`} hint="Optional — 0 or blank if this is your first time"><input type="number" min="0" value={form.years_attended_event} onChange={(e) => set('years_attended_event', e.target.value)} /></Field></div>
+          </div>
           {showOraExp && (
             <label className="check-row"><input type="checkbox" checked={form.ora_experienced} onChange={(e) => set('ora_experienced', e.target.checked)} /> I have marshalled the ORA before and can cover it if needed</label>
           )}
@@ -313,17 +318,19 @@ export default function MarshalForm() {
           <Field label="Unavailability notes" hint="Note any specific times you can't marshal, even within your selected days"><textarea value={form.unavailable_notes} onChange={(e) => set('unavailable_notes', e.target.value)} /></Field>
         </Section>
 
-        <Section n={3} title="Departure & Sunday plans">
+        <Section n={3} title="Departure & plans">
           <div className="card card-accent mb"><span className="metadata">Your departure preference helps us assign you to the right team.</span></div>
           <Field label="Departure" required error={errors.departure_option}>
             {DEPARTURE.map((d) => (
               <label key={d.v} className="radio-row"><input type="radio" name="departure" checked={form.departure_option === d.v} onChange={() => set('departure_option', d.v)} /> {d.l}</label>
             ))}
           </Field>
-          <Field label="Sunday barbie" required error={errors.barbie_attending}>
-            <label className="radio-row"><input type="radio" name="barbie" checked={form.barbie_attending === true} onChange={() => set('barbie_attending', true)} /> Yes please (<Money value={barbiePrice} />)</label>
-            <label className="radio-row"><input type="radio" name="barbie" checked={form.barbie_attending === false} onChange={() => set('barbie_attending', false)} /> No thanks</label>
-          </Field>
+          {addonEnabled && (
+            <Field label={addonLabel} required error={errors.barbie_attending}>
+              <label className="radio-row"><input type="radio" name="barbie" checked={form.barbie_attending === true} onChange={() => set('barbie_attending', true)} /> Yes please (<Money value={addonPrice} />)</label>
+              <label className="radio-row"><input type="radio" name="barbie" checked={form.barbie_attending === false} onChange={() => set('barbie_attending', false)} /> No thanks</label>
+            </Field>
+          )}
         </Section>
 
         <Section n={4} title="Accommodation & travel">
@@ -354,11 +361,11 @@ export default function MarshalForm() {
           <button type="button" className="btn btn-ghost btn-sm" onClick={addShirt}>+ Add another shirt</button>
           <div className="card card-accent mt">
             <div className="spread"><span>Shirts ({shirtQty} × <Money value={shirtPrice} />)</span><strong><Money value={shirtTotal} /></strong></div>
-            <div className="spread"><span>Sunday barbie</span><strong><Money value={barbieTotal} /></strong></div>
+            {addonEnabled && <div className="spread"><span>{addonLabel}</span><strong><Money value={addonTotal} /></strong></div>}
             <div className="spread" style={{ borderTop: '1px solid var(--color-border)', marginTop: 8, paddingTop: 8 }}>
               <span style={{ fontWeight: 700 }}>Total due</span><strong style={{ fontSize: 18 }}><Money value={total} /></strong>
             </div>
-            <div className="metadata mt">You won't be asked to pay yet — Jon will contact you when shirts are ordered.</div>
+            <div className="metadata mt">You won't be asked to pay yet — we'll contact you when shirts are ordered.</div>
           </div>
         </Section>
 

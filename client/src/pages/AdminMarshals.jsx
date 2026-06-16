@@ -33,7 +33,7 @@ export default function AdminMarshals() {
       {loading ? <Spinner /> : (
         <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
           <table className="data">
-            <thead><tr><th>Name</th><th>Email</th><th>Mobile</th><th>Licence</th><th>GFoS yrs</th><th>ORA exp.</th><th>Active</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Mobile</th><th>Licence</th><th>Exp. (yrs)</th><th>ORA exp.</th><th>Active</th></tr></thead>
             <tbody>
               {rows.length === 0 && <tr><td colSpan={7} className="center muted" style={{ padding: 24 }}>No marshals found.</td></tr>}
               {rows.map((m) => (
@@ -95,9 +95,9 @@ function MarshalDetail({ marshalId, canEdit, onChanged }) {
       <div className="card mb">
         <Detail label="Address">{[m.address_line1, m.address_line2, m.address_town, m.address_postcode].filter(Boolean).join(', ')}</Detail>
         <Detail label="MSUK licence">{m.msuk_licence_number} · {m.msuk_licence_grades}</Detail>
-        <Detail label="WDMC member">{m.wdmc_member_number}</Detail>
+        <Detail label="Club member">{m.wdmc_member_number}</Detail>
         <Detail label="Interests">{(m.motorsport_interests || []).join(', ')}</Detail>
-        <Detail label="GFoS years">{m.gfos_years_attended}</Detail>
+        <Detail label="Years of experience">{m.gfos_years_attended}</Detail>
       </div>
 
       {canEdit && (

@@ -50,7 +50,7 @@ export default function CommitteeView() {
       <div className="row row-wrap mb">
         <Stat label="ORA Team A" value={`${s.ora.teamA}/${s.ora.target}`} />
         <Stat label="ORA Team B" value={`${s.ora.teamB}/${s.ora.target}`} />
-        <Stat label="Barbie" value={s.barbie.attending} />
+        <Stat label="Add-on" value={s.barbie.attending} />
         <Stat label="Shirts" value={s.shirts.totalQty} />
       </div>
 

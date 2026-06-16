@@ -51,8 +51,11 @@ router.get('/apply/:token', async (req, res) => {
         dates: formatEventDates(event),
         location: event.location,
         description: event.description,
+        organisation_name: event.organisation_name || '',
         shirt_price: Number(event.shirt_price),
-        barbie_price: Number(event.barbie_price),
+        addon_enabled: !!event.addon_enabled,
+        addon_label: event.addon_label || '',
+        addon_price: Number(event.barbie_price),
         stage_changeover_time: event.stage_changeover_time,
         stage_direction: event.stage_direction,
       },
@@ -84,7 +87,7 @@ router.post('/apply/:token/decline', async (req, res) => {
     if (!ctx) return res.status(404).json({ error: 'This invitation link is not valid.' });
     const { invitation, event, marshal } = ctx;
     if (invitation.status === 'accepted') {
-      return res.status(409).json({ error: "You've already applied. Email Jon if your plans have changed." });
+      return res.status(409).json({ error: "You've already applied. Email the organisers if your plans have changed." });
     }
     await db.query(
       "UPDATE invitations SET status = 'declined', responded_at = NOW() WHERE id = $1",
@@ -184,9 +187,10 @@ router.post('/apply/:token', async (req, res) => {
 
     // Cost calculation.
     const shirts = Array.isArray(b.shirts) ? b.shirts.filter((s) => s.size && s.quantity) : [];
+    const addonSelected = !!event.addon_enabled && !!b.barbie_attending;
     const { shirtTotal, barbieTotal, total } = calculateTotal({
       shirts,
-      barbieAttending: !!b.barbie_attending,
+      barbieAttending: addonSelected,
       shirtPrice: event.shirt_price,
       barbiePrice: event.barbie_price,
     });
@@ -212,7 +216,9 @@ router.post('/apply/:token', async (req, res) => {
       accommodation_size_w: b.accommodation_size_w || null,
       sharing_with_names: b.sharing_with_names || null,
       travelling_with_names: b.travelling_with_names || null,
-      barbie_attending: !!b.barbie_attending,
+      barbie_attending: addonSelected,
+      years_attended_event: b.years_attended_event != null && b.years_attended_event !== ''
+        ? parseInt(b.years_attended_event, 10) : null,
       total_due: total,
       signature_name: b.signature_name,
     };
@@ -272,7 +278,8 @@ router.post('/apply/:token', async (req, res) => {
         role_preference: application.role_preference,
         marshalling_days: (application.marshalling_days || []).join(', '),
         shirt_summary: shirtSummary,
-        barbie_attending: application.barbie_attending,
+        addon_label: event.addon_enabled ? (event.addon_label || 'Optional extra') : '',
+        addon_attending: application.barbie_attending,
         total_due: total.toFixed(2),
         licence_outstanding: !marshal.licence_upload_path,
       }),
@@ -390,6 +397,9 @@ router.get('/status/:token', async (req, res) => {
       event: {
         name: event.name,
         dates: formatEventDates(event),
+        organisation_name: event.organisation_name || '',
+        addon_enabled: !!event.addon_enabled,
+        addon_label: event.addon_label || '',
         bacs_account_name: event.bacs_account_name,
         bacs_sort_code: event.bacs_sort_code,
         bacs_account_number: event.bacs_account_number,

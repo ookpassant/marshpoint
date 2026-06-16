@@ -80,12 +80,14 @@ async function sendToRecipients({ eventId, event, recipients, templateName, type
       subject = renderMerge(customSubject || '', fields);
       text = renderMerge(customBody || '', fields);
     } else if (templateName === 'payment_request') {
-      const shirtTotal = Number(r.total_due || 0) - (r.barbie_attending ? Number(event.barbie_price) : 0);
+      const addonTotal = r.barbie_attending ? Number(event.barbie_price) : 0;
+      const shirtTotal = Number(r.total_due || 0) - addonTotal;
       const built = templates.payment_request({
         ...fields,
         total_due: Number(r.total_due || 0).toFixed(2),
         shirt_total: Math.max(0, shirtTotal).toFixed(2),
-        barbie_total: (r.barbie_attending ? Number(event.barbie_price) : 0).toFixed(2),
+        addon_total: addonTotal.toFixed(2),
+        addon_label: event.addon_label || 'Optional extra',
         bacs_account_name: event.bacs_account_name,
         bacs_sort_code: event.bacs_sort_code,
         bacs_account_number: event.bacs_account_number,

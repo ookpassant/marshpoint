@@ -3,8 +3,8 @@
 > Marshal Event Management — marshpoint.co.uk
 
 A self-hosted web application for managing motorsport event marshal signups.
-Built for the Welbeck & District Motor Club (WDMC) marshalling team at the
-Goodwood Festival of Speed (GFoS).
+Club- and event-agnostic: each event configures its own organising club, dates,
+pricing, and an optional paid add-on, so any motor club can run any event with it.
 
 ## What it does
 

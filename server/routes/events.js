@@ -42,9 +42,10 @@ router.post('/admin/events', requireAuth, requireCoordinator, async (req, res) =
   // Insert only the columns supplied; let DB defaults cover the rest. This
   // avoids COALESCE type-inference issues against typed columns (time, numeric).
   const optional = [
-    'location', 'description', 'status', 'ora_team_size_target', 'stage_shifts_per_day',
-    'stage_shift_target', 'stage_changeover_time', 'stage_direction', 'shirt_price',
-    'barbie_price', 'shirts_ordered', 'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
+    'location', 'description', 'organisation_name', 'status', 'ora_team_size_target',
+    'stage_shifts_per_day', 'stage_shift_target', 'stage_changeover_time', 'stage_direction',
+    'shirt_price', 'barbie_price', 'addon_enabled', 'addon_label', 'shirts_ordered',
+    'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
   ];
   const cols = ['name', 'year', 'start_date', 'end_date'];
   const vals = [b.name, b.year, b.start_date, b.end_date];
@@ -92,9 +93,9 @@ router.get('/admin/events/:id', requireAuth, async (req, res) => {
 router.put('/admin/events/:id', requireAuth, requireCoordinator, async (req, res) => {
   const b = req.body || {};
   const allowed = [
-    'name', 'year', 'start_date', 'end_date', 'location', 'description', 'status',
+    'name', 'year', 'start_date', 'end_date', 'location', 'description', 'organisation_name', 'status',
     'ora_team_size_target', 'stage_shifts_per_day', 'stage_shift_target', 'stage_changeover_time',
-    'stage_direction', 'shirt_price', 'barbie_price', 'shirts_ordered',
+    'stage_direction', 'shirt_price', 'barbie_price', 'addon_enabled', 'addon_label', 'shirts_ordered',
     'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
   ];
   const sets = [];

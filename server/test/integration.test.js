@@ -72,7 +72,7 @@ test('API integration — full lifecycle', async (t) => {
     });
 
     await t.test('create event with day generation', async () => {
-      const r = await call('POST', '/admin/events', { token: coordToken, body: { name: 'GFoS Test', year: 2026, start_date: '2026-07-09', end_date: '2026-07-12', stage_direction: 'anticlockwise' } });
+      const r = await call('POST', '/admin/events', { token: coordToken, body: { name: 'GFoS Test', year: 2026, start_date: '2026-07-09', end_date: '2026-07-12', stage_direction: 'anticlockwise', addon_enabled: true, addon_label: 'Sunday barbecue', barbie_price: 15 } });
       assert.strictEqual(r.status, 201);
       eventId = r.body.id;
       const detail = await call('GET', `/admin/events/${eventId}`, { token: coordToken });

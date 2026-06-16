@@ -156,7 +156,7 @@ export default function AdminApplications() {
                 <th onClick={() => toggleSort('name')} style={{ cursor: 'pointer' }}>Name</th>
                 <th>Role</th><th>Days</th><th>Team</th><th>Licence</th>
                 <th onClick={() => toggleSort('status')} style={{ cursor: 'pointer' }}>Status</th>
-                <th>Shirts</th><th>Barbie</th><th>Payment</th>
+                <th>Shirts</th><th>Add-on</th><th>Payment</th>
                 <th onClick={() => toggleSort('submitted_at')} style={{ cursor: 'pointer' }}>Submitted</th>
               </tr>
             </thead>

@@ -5,7 +5,7 @@ import PublicLayout from '../components/PublicLayout';
 import { Alert, Money, Spinner, StatusBadge } from '../components/ui';
 
 const STATUS_EXPLAIN = {
-  applied: "We've got your application. Jon will review it soon.",
+  applied: "We've got your application. We'll review it soon.",
   licence_pending: "We're still waiting for your MSUK licence before we can confirm your place.",
   confirmed: "You're confirmed as part of the team. See you there!",
   cancelled: 'This application has been cancelled.',
@@ -97,8 +97,8 @@ export default function MarshalStatus() {
         <div className="card card-accent mb">
           <h3>Upload your licence</h3>
           <p style={{ marginTop: 0 }}>{marshal.licence_uploaded
-            ? "We've got your licence and Jon will verify it shortly."
-            : 'We still need your MSUK licence before we can confirm your place. No licence = no GFoS.'}</p>
+            ? "We've got your licence and we'll verify it shortly."
+            : 'We still need your MSUK licence before we can confirm your place. No licence = no marshalling.'}</p>
           {!marshal.licence_uploaded && (
             <>
               <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => uploadLicence(e.target.files[0])} />
@@ -119,7 +119,7 @@ export default function MarshalStatus() {
             Account name: {event.bacs_account_name || '—'}<br />
             Sort code: {event.bacs_sort_code || '—'}<br />
             Account number: {event.bacs_account_number || '—'}<br />
-            Reference: GFoS/{marshal.full_name.split(' ').slice(-1)[0]}
+            Reference: {(event.name || 'EVENT').replace(/[^A-Za-z0-9]/g, '').slice(0, 16)}/{marshal.full_name.split(' ').slice(-1)[0]}
           </div>
         </div>
       )}
@@ -155,7 +155,7 @@ export default function MarshalStatus() {
             <tr><td className="muted">Arrival</td><td>{a.arrival_day || '—'}</td></tr>
             <tr><td className="muted">Departure</td><td>{DEPARTURE_LABELS[a.departure_option] || '—'}</td></tr>
             <tr><td className="muted">Accommodation</td><td style={{ textTransform: 'capitalize' }}>{a.accommodation_type || '—'}</td></tr>
-            <tr><td className="muted">Sunday barbie</td><td>{a.barbie_attending ? 'Yes' : 'No'}</td></tr>
+            {event.addon_enabled && <tr><td className="muted">{event.addon_label || 'Optional extra'}</td><td>{a.barbie_attending ? 'Yes' : 'No'}</td></tr>}
             <tr><td className="muted">Shirts</td><td>{shirts.length ? shirts.map((s) => `${s.quantity}× ${s.size}`).join(', ') : '—'}</td></tr>
             <tr><td className="muted">Total due</td><td><Money value={a.total_due} /> {a.payment_received ? <span className="badge badge-paid">Paid</span> : null}</td></tr>
           </tbody>

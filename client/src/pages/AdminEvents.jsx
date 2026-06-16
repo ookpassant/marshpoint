@@ -8,9 +8,10 @@ const STATUSES = ['draft', 'inviting', 'closed', 'complete'];
 
 const BLANK = {
   name: '', year: new Date().getFullYear(), start_date: '', end_date: '',
-  location: '', description: '', status: 'draft',
+  location: '', description: '', organisation_name: '', status: 'draft',
   ora_team_size_target: 20, stage_shift_target: 10, stage_shifts_per_day: 2, stage_changeover_time: '12:30',
-  stage_direction: 'anticlockwise', shirt_price: '15.00', barbie_price: '15.00',
+  stage_direction: 'anticlockwise', shirt_price: '15.00',
+  addon_enabled: false, addon_label: '', barbie_price: '15.00',
   shirts_ordered: false, bacs_account_name: '', bacs_sort_code: '', bacs_account_number: '',
 };
 
@@ -21,13 +22,14 @@ function EventForm({ initial, onSave, onCancel, busy, error }) {
     <div>
       <Alert kind="error">{error}</Alert>
       <div className="row row-wrap">
-        <div className="col" style={{ minWidth: 200 }}><div className="field"><label className="field-label">Name<span className="req">*</span></label><input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="GFoS 2026" /></div></div>
+        <div className="col" style={{ minWidth: 200 }}><div className="field"><label className="field-label">Name<span className="req">*</span></label><input value={f.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Summer Rally 2026" /></div></div>
         <div style={{ width: 110 }}><div className="field"><label className="field-label">Year<span className="req">*</span></label><input type="number" value={f.year} onChange={(e) => set('year', e.target.value)} /></div></div>
       </div>
       <div className="row row-wrap">
         <div className="col" style={{ minWidth: 150 }}><div className="field"><label className="field-label">Start date<span className="req">*</span></label><input type="date" value={f.start_date} onChange={(e) => set('start_date', e.target.value)} /></div></div>
         <div className="col" style={{ minWidth: 150 }}><div className="field"><label className="field-label">End date<span className="req">*</span></label><input type="date" value={f.end_date} onChange={(e) => set('end_date', e.target.value)} /></div></div>
       </div>
+      <div className="field"><label className="field-label">Organising club / organisation</label><input value={f.organisation_name || ''} onChange={(e) => set('organisation_name', e.target.value)} placeholder="Shown in emails &amp; payment reference" /></div>
       <div className="field"><label className="field-label">Location</label><input value={f.location || ''} onChange={(e) => set('location', e.target.value)} /></div>
       <div className="field"><label className="field-label">Description</label><textarea value={f.description || ''} onChange={(e) => set('description', e.target.value)} /></div>
       <div className="row row-wrap">
@@ -39,9 +41,15 @@ function EventForm({ initial, onSave, onCancel, busy, error }) {
         <div className="col" style={{ minWidth: 120 }}><div className="field"><label className="field-label">Stage changeover</label><input type="time" value={String(f.stage_changeover_time || '').slice(0, 5)} onChange={(e) => set('stage_changeover_time', e.target.value)} /></div></div>
         <div className="col" style={{ minWidth: 140 }}><div className="field"><label className="field-label">Stage direction</label><select value={f.stage_direction} onChange={(e) => set('stage_direction', e.target.value)}><option value="anticlockwise">Anticlockwise</option><option value="clockwise">Clockwise</option></select></div></div>
       </div>
-      <div className="row row-wrap">
-        <div className="col" style={{ minWidth: 110 }}><div className="field"><label className="field-label">Shirt price (£)</label><input type="number" step="0.01" value={f.shirt_price} onChange={(e) => set('shirt_price', e.target.value)} /></div></div>
-        <div className="col" style={{ minWidth: 110 }}><div className="field"><label className="field-label">Barbie price (£)</label><input type="number" step="0.01" value={f.barbie_price} onChange={(e) => set('barbie_price', e.target.value)} /></div></div>
+      <div className="field" style={{ maxWidth: 160 }}><label className="field-label">Shirt price (£)</label><input type="number" step="0.01" value={f.shirt_price} onChange={(e) => set('shirt_price', e.target.value)} /></div>
+      <div className="card mb">
+        <label className="check-row" style={{ margin: 0, marginBottom: f.addon_enabled ? 10 : 0 }}><input type="checkbox" checked={!!f.addon_enabled} onChange={(e) => set('addon_enabled', e.target.checked)} /> Offer an optional paid add-on (e.g. a meal or social)</label>
+        {f.addon_enabled && (
+          <div className="row row-wrap">
+            <div className="col" style={{ minWidth: 180 }}><div className="field"><label className="field-label">Add-on name</label><input value={f.addon_label || ''} onChange={(e) => set('addon_label', e.target.value)} placeholder="e.g. Sunday barbecue" /></div></div>
+            <div className="col" style={{ minWidth: 110 }}><div className="field"><label className="field-label">Add-on price (£)</label><input type="number" step="0.01" value={f.barbie_price} onChange={(e) => set('barbie_price', e.target.value)} /></div></div>
+          </div>
+        )}
       </div>
       <div className="card card-accent mb">
         <label className="check-row" style={{ margin: 0 }}><input type="checkbox" checked={!!f.shirts_ordered} onChange={(e) => set('shirts_ordered', e.target.checked)} /> Shirts have been ordered (unlocks payment request emails)</label>
