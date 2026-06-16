@@ -39,26 +39,25 @@ router.post('/admin/events', requireAuth, requireCoordinator, async (req, res) =
   if (!b.name || !b.year || !b.start_date || !b.end_date) {
     return res.status(400).json({ error: 'name, year, start_date and end_date are required' });
   }
+  // Insert only the columns supplied; let DB defaults cover the rest. This
+  // avoids COALESCE type-inference issues against typed columns (time, numeric).
+  const optional = [
+    'location', 'description', 'status', 'ora_team_size_target', 'stage_shifts_per_day',
+    'stage_changeover_time', 'stage_direction', 'shirt_price', 'barbie_price',
+    'shirts_ordered', 'bacs_account_name', 'bacs_sort_code', 'bacs_account_number',
+  ];
+  const cols = ['name', 'year', 'start_date', 'end_date'];
+  const vals = [b.name, b.year, b.start_date, b.end_date];
+  for (const k of optional) {
+    if (b[k] !== undefined && b[k] !== null && b[k] !== '') { cols.push(k); vals.push(b[k]); }
+  }
+  const placeholders = vals.map((_, i) => `$${i + 1}`);
   const client = await db.getClient();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `INSERT INTO events
-        (name, year, start_date, end_date, location, description, status,
-         ora_team_size_target, stage_shifts_per_day, stage_changeover_time,
-         stage_direction, shirt_price, barbie_price, shirts_ordered,
-         bacs_account_name, bacs_sort_code, bacs_account_number)
-       VALUES ($1,$2,$3,$4,$5,$6,COALESCE($7,'draft'),
-         COALESCE($8,20),COALESCE($9,2),COALESCE($10,'12:30'),
-         COALESCE($11,'anticlockwise'),COALESCE($12,15.00),COALESCE($13,15.00),
-         COALESCE($14,false),$15,$16,$17)
-       RETURNING *`,
-      [
-        b.name, b.year, b.start_date, b.end_date, b.location || null, b.description || null,
-        b.status, b.ora_team_size_target, b.stage_shifts_per_day, b.stage_changeover_time,
-        b.stage_direction, b.shirt_price, b.barbie_price, b.shirts_ordered,
-        b.bacs_account_name || null, b.bacs_sort_code || null, b.bacs_account_number || null,
-      ]
+      `INSERT INTO events (${cols.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`,
+      vals
     );
     const event = rows[0];
     await generateEventDays(client, event.id, event.start_date, event.end_date);

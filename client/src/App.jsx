@@ -8,6 +8,8 @@ import MarshalForm from './pages/MarshalForm';
 import MarshalStatus from './pages/MarshalStatus';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminEvents from './pages/AdminEvents';
+import AdminInvitations from './pages/AdminInvitations';
 import AdminApplications from './pages/AdminApplications';
 import AdminSchedule from './pages/AdminSchedule';
 import AdminComms from './pages/AdminComms';
@@ -38,6 +40,8 @@ export default function App() {
           <Route path="/admin/login" element={<Login />} />
           <Route path="/admin" element={<AdminSection />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="invitations" element={<AdminInvitations />} />
             <Route path="applications" element={<AdminApplications />} />
             <Route path="schedule" element={<AdminSchedule />} />
             <Route path="comms" element={<AdminComms />} />

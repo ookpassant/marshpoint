@@ -40,7 +40,7 @@ export default function AdminDashboard() {
   }
 
   if (evLoading || loading) return <Spinner />;
-  if (!activeId) return <div className="card"><h2>No event yet</h2><p>Create an event to get started.</p></div>;
+  if (!activeId) return <div className="card"><h2>No event yet</h2><p>Create an event to get started.</p><button className="btn btn-primary btn-sm" onClick={() => navigate('/admin/events')}>Go to Events</button></div>;
   if (error) return <Alert kind="error">{error}</Alert>;
   if (!summary) return null;
 
