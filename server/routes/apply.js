@@ -77,6 +77,37 @@ router.get('/apply/:token', async (req, res) => {
   }
 });
 
+// POST /api/apply/:token/decline — marshal declines this year
+router.post('/apply/:token/decline', async (req, res) => {
+  try {
+    const ctx = await resolveToken(req.params.token);
+    if (!ctx) return res.status(404).json({ error: 'This invitation link is not valid.' });
+    const { invitation, event, marshal } = ctx;
+    if (invitation.status === 'accepted') {
+      return res.status(409).json({ error: "You've already applied. Email Jon if your plans have changed." });
+    }
+    await db.query(
+      "UPDATE invitations SET status = 'declined', responded_at = NOW() WHERE id = $1",
+      [invitation.id]
+    );
+    // Let the coordinator know.
+    const coordEmail = process.env.EMAIL_FROM_ADDRESS;
+    if (coordEmail) {
+      const who = marshal ? `${marshal.forenames} ${marshal.surname}` : invitation.email;
+      sendMail({
+        to: coordEmail,
+        subject: `Declined: ${who} — ${event.name}`,
+        text: `${who} has declined their invitation to ${event.name}.`,
+        type: 'general', eventId: event.id, marshalId: invitation.marshal_id,
+      }).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to record your response' });
+  }
+});
+
 // POST /api/apply/:token — submit application
 router.post('/apply/:token', async (req, res) => {
   const b = req.body || {};

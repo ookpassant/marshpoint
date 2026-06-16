@@ -67,6 +67,7 @@ export default function MarshalForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [result, setResult] = useState(null);
+  const [declined, setDeclined] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
 
   // Load invitation + restore any saved draft.
@@ -188,8 +189,31 @@ export default function MarshalForm() {
     }
   }
 
+  async function decline() {
+    if (!window.confirm("Let Jon know you can't make it this year?")) return;
+    try {
+      await api.post(`/apply/${token}/decline`);
+      localStorage.removeItem(draftKey);
+      setDeclined(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      setSubmitError(errMessage(err, 'Could not record your response.'));
+    }
+  }
+
   if (loading) return <PublicLayout><Spinner /></PublicLayout>;
   if (loadError) return <PublicLayout><div className="card"><Alert kind="error">{loadError}</Alert></div></PublicLayout>;
+
+  if (declined) {
+    return (
+      <PublicLayout>
+        <div className="card">
+          <h2>Thanks for letting us know</h2>
+          <p>No problem at all — we've told Jon you can't make {event.name} this year. Hope to see you next time!</p>
+        </div>
+      </PublicLayout>
+    );
+  }
 
   if (result) {
     return (
@@ -213,9 +237,12 @@ export default function MarshalForm() {
 
   return (
     <PublicLayout>
-      <div className="mb">
-        <h1 style={{ marginBottom: 2 }}>{event.name}</h1>
-        <div className="metadata">{event.dates}{event.location ? ` · ${event.location}` : ''}</div>
+      <div className="spread mb">
+        <div>
+          <h1 style={{ marginBottom: 2 }}>{event.name}</h1>
+          <div className="metadata">{event.dates}{event.location ? ` · ${event.location}` : ''}</div>
+        </div>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={decline}>Can't make it?</button>
       </div>
 
       <Alert kind="error">{submitError}</Alert>

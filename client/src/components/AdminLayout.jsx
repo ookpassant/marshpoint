@@ -10,6 +10,7 @@ const NAV = [
   { to: '/admin/events', label: 'Events' },
   { to: '/admin/invitations', label: 'Invitations', coordinatorOnly: true },
   { to: '/admin/applications', label: 'Applications' },
+  { to: '/admin/marshals', label: 'Marshals' },
   { to: '/admin/schedule', label: 'Schedule', coordinatorOnly: true },
   { to: '/admin/comms', label: 'Communications', coordinatorOnly: true },
   { to: '/admin/payments', label: 'Payments' },

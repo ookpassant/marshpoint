@@ -45,6 +45,24 @@ router.get('/admin/marshals/:id', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/marshals/:id/applications — this marshal's history across events
+router.get('/admin/marshals/:id/applications', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT a.id, a.status, a.role_preference, a.ora_team, a.total_due, a.payment_received,
+              e.id AS event_id, e.name AS event_name, e.year
+       FROM applications a JOIN events e ON e.id = a.event_id
+       WHERE a.marshal_id = $1
+       ORDER BY e.year DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load marshal history' });
+  }
+});
+
 // POST /api/admin/marshals — create
 router.post('/admin/marshals', requireAuth, requireCoordinator, async (req, res) => {
   const b = req.body || {};

@@ -56,6 +56,13 @@ npm run dev
 
 The API listens on `http://localhost:3001`.
 
+Run the backend unit tests (no database required — they cover the ORA
+auto-assignment algorithm, cost calculation, and CSV export):
+
+```bash
+npm test
+```
+
 ### Frontend
 
 ```bash
@@ -88,6 +95,30 @@ cd client && npm run build
 cd ../server && npm install
 pm2 restart marshal-app
 ```
+
+## Coordinator dashboard
+
+Once signed in, coordinators get a full lifecycle toolkit:
+
+- **Events** — create/edit events, ORA + stage config, shirt/barbie pricing,
+  BACS details, and the `shirts ordered` toggle that unlocks payment requests
+- **Invitations** — bulk-add invitees (plain email or `Name <email>`), send
+  personal apply links, copy links, remind non-responders, revoke
+- **Applications** — filterable/sortable table, slide-over detail with licence
+  verification, confirm, payment, and per-marshal email; bulk actions; CSV export
+- **Marshals** — the people directory that persists across events, with notes,
+  ORA-experience flag, and per-marshal event history
+- **Schedule** — editable grid, ORA Team A/B auto-assign (preview + commit),
+  lock-and-notify, daily roster view, CSV export
+- **Communications** — templated and custom emails to recipient groups, plus a
+  full send log
+- **Payments** and **Reports** (shirt order, barbie count, financials, daily roster)
+
+Committee members see a read-only subset (dashboard, applications, payments,
+reports, and a dedicated committee overview).
+
+Marshals who can't attend can decline in one click from their apply page, which
+notifies the coordinator and marks the invitation declined.
 
 ## Key business rules
 
