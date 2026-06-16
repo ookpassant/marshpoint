@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build output
+client/build/
+client/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Uploads (local dev)
+uploads/
+var/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
