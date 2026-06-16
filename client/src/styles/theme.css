@@ -75,6 +75,10 @@ a:hover { text-decoration: underline; }
   letter-spacing: 0.01em; text-decoration: none; line-height: 1;
 }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Keyboard focus ring for accessibility */
+.btn:focus-visible, .mp-navlink:focus-visible, a:focus-visible {
+  outline: 2px solid var(--color-orange); outline-offset: 2px;
+}
 .btn-primary { background: var(--color-orange); color: #fff; }
 .btn-primary:hover:not(:disabled) { background: var(--color-orange-hover); }
 .btn-secondary { background: var(--color-navy); color: #fff; }
@@ -230,4 +234,9 @@ table.data tr.clickable { cursor: pointer; }
   h1 { font-size: 28px; }
   h2 { font-size: 21px; }
   .mp-main { padding: 12px; }
+  /* 16px form controls stop iOS Safari from zooming on focus */
+  input, select, textarea { font-size: 16px; }
+  /* Comfortable tap targets */
+  .btn { padding: 12px 20px; }
+  .btn-sm { padding: 9px 14px; }
 }
