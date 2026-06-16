@@ -5,6 +5,7 @@ import { EventProvider } from './components/EventContext';
 import AdminLayout from './components/AdminLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 
+import Landing from './pages/Landing';
 import MarshalForm from './pages/MarshalForm';
 import MarshalStatus from './pages/MarshalStatus';
 import Login from './pages/Login';
@@ -35,7 +36,8 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public marshal-facing routes */}
+          {/* Public landing + marshal-facing routes */}
+          <Route path="/" element={<Landing />} />
           <Route path="/apply/:token" element={<MarshalForm />} />
           <Route path="/status/:token" element={<MarshalStatus />} />
 
@@ -54,8 +56,7 @@ export default function App() {
             <Route path="committee" element={<CommitteeView />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/admin" replace />} />
-          <Route path="*" element={<Navigate to="/admin" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
