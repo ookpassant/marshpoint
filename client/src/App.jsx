@@ -6,6 +6,7 @@ import AdminLayout from './components/AdminLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import Landing from './pages/Landing';
+import Privacy from './pages/Privacy';
 import MarshalForm from './pages/MarshalForm';
 import MarshalStatus from './pages/MarshalStatus';
 import Login from './pages/Login';
@@ -38,6 +39,7 @@ export default function App() {
         <Routes>
           {/* Public landing + marshal-facing routes */}
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/apply/:token" element={<MarshalForm />} />
           <Route path="/status/:token" element={<MarshalStatus />} />
 

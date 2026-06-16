@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db/pool');
 const { requireAuth, requireCoordinator } = require('../middleware/auth');
+const { buildDataPack, anonymiseMarshal, logProcessing } = require('../util/gdpr');
 
 const router = express.Router();
 
@@ -60,6 +61,50 @@ router.get('/admin/marshals/:id/applications', requireAuth, async (req, res) => 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to load marshal history' });
+  }
+});
+
+// GET /api/admin/marshals/:id/export — subject-access data pack (JSON download)
+router.get('/admin/marshals/:id/export', requireAuth, async (req, res) => {
+  try {
+    const pack = await buildDataPack(req.params.id);
+    if (!pack) return res.status(404).json({ error: 'Marshal not found' });
+    await logProcessing('export', { marshalId: Number(req.params.id), performedBy: req.user.userId, detail: 'Coordinator data export' });
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="marshal-${req.params.id}-data.json"`);
+    res.send(JSON.stringify(pack, null, 2));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to export marshal data' });
+  }
+});
+
+// POST /api/admin/marshals/:id/erase — right to erasure (anonymise + delete files)
+router.post('/admin/marshals/:id/erase', requireAuth, requireCoordinator, async (req, res) => {
+  try {
+    const result = await anonymiseMarshal(Number(req.params.id), req.user.userId, 'erasure');
+    if (result.notFound) return res.status(404).json({ error: 'Marshal not found' });
+    if (result.alreadyAnonymised) return res.json({ ok: true, already: true });
+    res.json({ ok: true, files_removed: result.filesRemoved });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to erase marshal data' });
+  }
+});
+
+// GET /api/admin/marshals/:id/processing-log — the audit trail for this marshal
+router.get('/admin/marshals/:id/processing-log', requireAuth, async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT p.action, p.detail, p.created_at, u.name AS performed_by_name
+       FROM processing_log p LEFT JOIN users u ON u.id = p.performed_by
+       WHERE p.marshal_id = $1 ORDER BY p.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load processing log' });
   }
 });
 

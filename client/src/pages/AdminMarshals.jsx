@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import api, { errMessage } from '../api';
+import api, { errMessage, downloadFile } from '../api';
 import { useAuth } from '../auth';
 import { Alert, Spinner, SlideOver, StatusBadge, Detail } from '../components/ui';
 
@@ -65,13 +65,15 @@ function MarshalDetail({ marshalId, canEdit, onChanged }) {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
   const [msg, setMsg] = useState('');
+  const [audit, setAudit] = useState([]);
 
   function load() {
     setLoading(true);
     return Promise.all([
       api.get(`/admin/marshals/${marshalId}`),
       api.get(`/admin/marshals/${marshalId}/applications`),
-    ]).then(([mr, hr]) => { setM(mr.data); setNotes(mr.data.notes || ''); setHistory(hr.data); })
+      api.get(`/admin/marshals/${marshalId}/processing-log`),
+    ]).then(([mr, hr, pr]) => { setM(mr.data); setNotes(mr.data.notes || ''); setHistory(hr.data); setAudit(pr.data); })
       .catch(() => {}).finally(() => setLoading(false));
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,13 +85,23 @@ function MarshalDetail({ marshalId, canEdit, onChanged }) {
     catch (err) { setMsg(errMessage(err)); }
   }
 
+  async function erase() {
+    if (!window.confirm('Permanently erase this marshal\'s personal data and delete their licence files? This cannot be undone. History is kept anonymised.')) return;
+    setMsg('');
+    try {
+      const res = await api.post(`/admin/marshals/${marshalId}/erase`);
+      await load(); if (onChanged) onChanged();
+      setMsg(res.data.already ? 'Already erased.' : `Erased. ${res.data.files_removed || 0} licence file(s) deleted.`);
+    } catch (err) { setMsg(errMessage(err)); }
+  }
+
   if (loading) return <Spinner />;
   if (!m) return null;
 
   return (
     <div>
       {msg && <Alert kind="info">{msg}</Alert>}
-      <h3 style={{ marginBottom: 2 }}>{m.forenames} {m.surname}</h3>
+      <h3 style={{ marginBottom: 2 }}>{m.forenames} {m.surname} {m.anonymised_at && <span className="badge badge-cancelled">Erased</span>}</h3>
       <div className="metadata mb">{m.email} · {m.phone_mobile}</div>
 
       <div className="card mb">
@@ -125,6 +137,31 @@ function MarshalDetail({ marshalId, canEdit, onChanged }) {
                   <td style={{ textTransform: 'capitalize' }}>{h.role_preference || '—'}</td>
                   <td>{h.ora_team || '—'}</td>
                   <td>{h.payment_received ? '✓' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* GDPR: data & privacy */}
+      <div className="card mt">
+        <div className="eyebrow mb">Data &amp; privacy (GDPR)</div>
+        <div className="row gap-sm row-wrap mb">
+          <button className="btn btn-secondary btn-sm" onClick={() => downloadFile(`/admin/marshals/${marshalId}/export`, `marshal-${marshalId}-data.json`)}>Export data pack</button>
+          {canEdit && !m.anonymised_at && <button className="btn btn-ghost btn-sm" onClick={erase}>Erase personal data</button>}
+        </div>
+        <div className="eyebrow mb">Processing log</div>
+        {audit.length === 0 ? <span className="muted">No processing events recorded.</span> : (
+          <table className="data">
+            <thead><tr><th>When</th><th>Action</th><th>By</th><th>Detail</th></tr></thead>
+            <tbody>
+              {audit.map((p, i) => (
+                <tr key={i}>
+                  <td className="metadata nowrap">{new Date(p.created_at).toLocaleString('en-GB')}</td>
+                  <td>{p.action}</td>
+                  <td className="metadata">{p.performed_by_name || 'self / system'}</td>
+                  <td className="metadata">{p.detail || '—'}</td>
                 </tr>
               ))}
             </tbody>

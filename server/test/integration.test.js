@@ -57,7 +57,7 @@ test('API integration — full lifecycle', async (t) => {
     return { status: res.status, body: parsed };
   };
 
-  let coordToken; let cmteToken; let eventId; let applyToken; let appId;
+  let coordToken; let cmteToken; let eventId; let applyToken; let appId; let marshalId;
 
   try {
     await t.test('login as coordinator and committee', async () => {
@@ -103,12 +103,14 @@ test('API integration — full lifecycle', async (t) => {
         arrival_day: 'Thursday', marshalling_days: ['Thursday', 'Saturday'], role_preference: 'ora',
         departure_option: 'sunday_before_prizes', accommodation_type: 'tent', barbie_attending: true,
         shirts: [{ size: 'L', quantity: 2 }], signature_name: 'Sam Marshal',
+        agree_constitution: true, agree_contact: true, agree_privacy: true,
       } });
       assert.strictEqual(r.status, 201);
       assert.strictEqual(r.body.total_due, 45); // 2*15 + 15 barbie
       assert.strictEqual(r.body.status, 'licence_pending');
       const list = await call('GET', `/admin/events/${eventId}/applications`, { token: coordToken });
       appId = list.body[0].id;
+      marshalId = list.body[0].marshal_id;
     });
 
     await t.test('confirm blocked until licence verified', async () => {
@@ -166,6 +168,43 @@ test('API integration — full lifecycle', async (t) => {
       const text = await res.text();
       assert.strictEqual(res.status, 200);
       assert.ok(text.startsWith('id,surname,forenames'));
+    });
+
+    await t.test('GDPR: consent is recorded on the application', async () => {
+      const d = await call('GET', `/admin/applications/${appId}`, { token: coordToken });
+      assert.strictEqual(d.body.agreed_privacy, true);
+      assert.ok(d.body.consent_given_at);
+      assert.ok(d.body.privacy_policy_version);
+    });
+
+    await t.test('GDPR: marshal can self-export their data', async () => {
+      const res = await fetch(`${base}/status/${applyToken}/export`);
+      assert.strictEqual(res.status, 200);
+      const pack = await res.json();
+      assert.strictEqual(pack.personal_details.surname, 'Marshal');
+      assert.ok(Array.isArray(pack.applications) && pack.applications.length === 1);
+    });
+
+    await t.test('GDPR: coordinator export includes a processing history', async () => {
+      const res = await fetch(`${base}/admin/marshals/${marshalId}/export`, { headers: { Authorization: `Bearer ${coordToken}` } });
+      assert.strictEqual(res.status, 200);
+      const pack = await res.json();
+      assert.ok(pack.processing_history.some((p) => p.action === 'consent'));
+    });
+
+    await t.test('GDPR: erasure anonymises the marshal and scrubs PII', async () => {
+      const r = await call('POST', `/admin/marshals/${marshalId}/erase`, { token: coordToken });
+      assert.strictEqual(r.status, 200);
+      const m = await call('GET', `/admin/marshals/${marshalId}`, { token: coordToken });
+      assert.strictEqual(m.body.surname, 'Erased');
+      assert.ok(m.body.anonymised_at);
+      assert.strictEqual(m.body.email, `erased+${marshalId}@anonymised.invalid`);
+    });
+
+    await t.test('GDPR: committee cannot erase (403)', async () => {
+      // Re-erase attempt by committee should be forbidden regardless of state.
+      const r = await call('POST', `/admin/marshals/${marshalId}/erase`, { token: cmteToken });
+      assert.strictEqual(r.status, 403);
     });
   } finally {
     server.close();
