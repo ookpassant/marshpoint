@@ -26,6 +26,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -47,6 +49,16 @@ services:
     command: sh -c "node db/migrate.js && node app.js"
     volumes:
       - uploads:/var/marshal-uploads
+
+  # Local fake SMTP server with a web inbox — catches all outgoing email so you
+  # can see invitations/confirmations during testing. View at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"   # web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
 
   web:
     build: ./client
