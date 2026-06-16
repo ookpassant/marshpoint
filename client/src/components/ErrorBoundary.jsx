@@ -24,7 +24,7 @@ export default class ErrorBoundary extends React.Component {
           <div className="card" style={{ maxWidth: 440, textAlign: 'center' }}>
             <div className="center mb"><Logo /></div>
             <h2>Something broke on this screen</h2>
-            <p className="muted">Sorry — that's on us. Try reloading the page. If it keeps happening, let Jon know what you were doing.</p>
+            <p className="muted">Sorry — that's on us. Try reloading the page. If it keeps happening, let the organisers know what you were doing.</p>
             <button className="btn btn-primary" onClick={() => window.location.reload()}>Reload</button>
           </div>
         </div>

@@ -36,13 +36,13 @@ async function main() {
   } else {
     const r = await db.query(
       `INSERT INTO events
-        (name, year, start_date, end_date, location, description, status,
-         ora_team_size_target, stage_direction, shirt_price, barbie_price,
-         bacs_account_name, bacs_sort_code, bacs_account_number)
+        (name, year, start_date, end_date, location, description, organisation_name, status,
+         ora_team_size_target, stage_shift_target, stage_direction, shirt_price, barbie_price,
+         addon_enabled, addon_label, bacs_account_name, bacs_sort_code, bacs_account_number)
        VALUES ('GFoS 2026', 2026, '2026-07-09', '2026-07-12',
-               'Goodwood, West Sussex', 'Welbeck & District MC marshalling team at the Festival of Speed.',
-               'inviting', 20, 'anticlockwise', 15.00, 15.00,
-               'WDMC GFoS Account', '00-00-00', '12345678')
+               'Goodwood, West Sussex', 'Example marshalling event.', 'Welbeck & District Motor Club',
+               'inviting', 20, 10, 'anticlockwise', 15.00, 15.00,
+               TRUE, 'Sunday barbecue', 'Marshalling Account', '00-00-00', '12345678')
        RETURNING *`
     );
     event = r.rows[0];

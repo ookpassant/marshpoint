@@ -45,8 +45,7 @@ export default function Landing() {
 
       <div className="card mb">
         <p style={{ marginTop: 0 }}>
-          Marshpoint is how the Welbeck &amp; District Motor Club organises its
-          volunteer marshalling team for events like the Goodwood Festival of Speed —
+          Marshpoint helps motor clubs organise their volunteer marshalling teams —
           invitations, applications, licences, schedules and kit, all in one place.
         </p>
         <p style={{ marginBottom: 0 }}>

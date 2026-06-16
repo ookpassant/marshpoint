@@ -149,16 +149,17 @@ export default function ApplicationDetail({ applicationId, eventId, onChanged })
         <Detail label="Sharing with">{app.sharing_with_names}</Detail>
         <Detail label="Travelling with">{app.travelling_with_names}</Detail>
         <Detail label="Unavailability">{app.unavailable_notes}</Detail>
-        <Detail label="WDMC member">{app.wdmc_member_number}</Detail>
+        <Detail label="Club member">{app.wdmc_member_number}</Detail>
         <Detail label="ORA experienced">{app.ora_experienced ? 'Yes' : 'No'}</Detail>
-        <Detail label="GFoS years">{app.gfos_years_attended}</Detail>
+        <Detail label="Years of experience">{app.gfos_years_attended}</Detail>
+        <Detail label="Years at this event">{app.years_attended_event != null ? app.years_attended_event : '—'}</Detail>
       </div>
 
       {/* Kit + payment */}
       <div className="card mb">
         <div className="eyebrow mb">Kit &amp; payment</div>
         <Detail label="Shirts">{app.shirts && app.shirts.length ? app.shirts.map((s) => `${s.quantity}× ${s.size}`).join(', ') : '—'}</Detail>
-        <Detail label="Barbie">{app.barbie_attending ? 'Yes' : 'No'}</Detail>
+        <Detail label="Add-on">{app.barbie_attending ? 'Yes' : 'No'}</Detail>
         <Detail label="Total due"><Money value={app.total_due} /></Detail>
         {isCoordinator ? (
           <div className="row row-wrap mt">

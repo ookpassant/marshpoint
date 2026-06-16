@@ -41,7 +41,7 @@ services:
       SMTP_SECURE: "false"
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Marshpoint}
       EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS:-noreply@marshpoint.co.uk}
-      COORDINATOR_NAME: ${COORDINATOR_NAME:-Jon}
+      COORDINATOR_NAME: ${COORDINATOR_NAME:-The Marshalling Team}
       NODE_ENV: production
     # Apply migrations before booting the API.
     command: sh -c "node db/migrate.js && node app.js"

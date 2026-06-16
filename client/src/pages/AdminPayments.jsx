@@ -60,7 +60,7 @@ export default function AdminPayments() {
 
       <div className="card" style={{ padding: 0, overflowX: 'auto' }}>
         <table className="data">
-          <thead><tr><th>Name</th><th>Total due</th><th>Shirts</th><th>Barbie</th><th>Paid?</th><th>Date</th><th>Method</th></tr></thead>
+          <thead><tr><th>Name</th><th>Total due</th><th>Shirts</th><th>Add-on</th><th>Paid?</th><th>Date</th><th>Method</th></tr></thead>
           <tbody>
             {rows.length === 0 && <tr><td colSpan={7} className="center muted" style={{ padding: 24 }}>No confirmed marshals yet.</td></tr>}
             {rows.map((r) => (

@@ -97,7 +97,7 @@ export default function AdminDashboard() {
         <StatCard label="ORA Team A" value={`${s.ora.teamA} / ${s.ora.target}`} warn={s.ora.teamABelow} sub={s.ora.teamABelow ? 'Below target' : 'On target'} />
         <StatCard label="ORA Team B" value={`${s.ora.teamB} / ${s.ora.target}`} warn={s.ora.teamBBelow} sub={s.ora.teamBBelow ? 'Below target' : 'On target'} />
         <StatCard label="Licences verified" value={s.licences.verified} sub={`${s.licences.pending} pending · ${s.licences.missing} missing`} warn={s.licences.missing > 0} />
-        <StatCard label="Barbie" value={s.barbie.attending} sub="attending" />
+        <StatCard label="Add-on" value={s.barbie.attending} sub="opted in" />
       </div>
 
       <div className="row row-wrap">

@@ -34,7 +34,7 @@ function appBaseUrl() {
 }
 
 function coordinatorName() {
-  return process.env.COORDINATOR_NAME || 'Jon';
+  return process.env.COORDINATOR_NAME || 'The marshalling team';
 }
 
 // Build the common merge-field object shared by all templates.
@@ -47,6 +47,10 @@ function buildMergeFields({ marshal, event, token }) {
     marshal_email: marshal ? marshal.email : '',
     event_name: event ? event.name : '',
     event_dates: event ? formatEventDates(event) : '',
+    event_year: event ? event.year : '',
+    // Short alphanumeric event token, handy for payment references e.g. "GFoS2026".
+    event_short: event ? String(event.name || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 16) : '',
+    organisation_name: event && event.organisation_name ? event.organisation_name : '',
     coordinator_name: coordinatorName(),
     apply_url: token ? `${base}/apply/${token}` : '',
     status_url: token ? `${base}/status/${token}` : '',
