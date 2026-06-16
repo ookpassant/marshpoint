@@ -56,12 +56,28 @@ npm run dev
 
 The API listens on `http://localhost:3001`.
 
-Run the backend unit tests (no database required — they cover the ORA
-auto-assignment algorithm, cost calculation, and CSV export):
+Run the backend tests:
 
 ```bash
 npm test
 ```
+
+This runs two kinds of test:
+
+- **Unit tests** (no database) — the ORA auto-assignment algorithm, cost
+  calculation, and CSV export.
+- **Integration tests** — a full API lifecycle (login → invite → apply →
+  verify → confirm → auto-assign → reports) against a dedicated test database.
+  They skip automatically if no database is reachable. To run them, create the
+  test database once:
+
+  ```bash
+  createdb -O marshalapp marshals_test    # or: CREATE DATABASE marshals_test;
+  ```
+
+  The suite reads the same `DB_*` credentials as the app and uses the database
+  named by `TEST_DB_NAME` (default `marshals_test`); it applies the schema and
+  resets all tables on each run.
 
 ### Frontend
 
